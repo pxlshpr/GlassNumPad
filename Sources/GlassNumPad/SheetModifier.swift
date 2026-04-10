@@ -23,10 +23,9 @@ public extension View {
                 actionButton: actionButton,
                 onAction: onAction
             )
-            .presentationDetents([.height(configuration.sheetHeight)])
+            .presentationDetents([.height(configuration.resolvedSheetHeight)])
             .presentationDragIndicator(.visible)
-            .presentationBackground(.ultraThinMaterial)
-            .presentationCornerRadius(28)
+            .presentationBackground(.clear)
         }
     }
 

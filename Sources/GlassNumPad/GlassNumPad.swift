@@ -1,25 +1,10 @@
 import SwiftUI
 
-/// A glass-style numeric keypad with an integrated calculator mode.
-///
-/// Present it in a sheet via the `.glassNumPad()` view modifier, or embed directly.
-///
-/// ```swift
-/// .glassNumPad(isPresented: $show, value: $amount) {
-///     Text("kg")          // capsule label
-/// } pickerContent: {
-///     WeightUnitPicker()  // replaces numpad when capsule is tapped
-/// } actionButton: {
-///     Image(systemName: "checkmark")
-/// }
-/// ```
 public struct GlassNumPad<
     CapsuleLabel: View,
     PickerContent: View,
     ActionContent: View
 >: View {
-
-    // MARK: - Public
 
     @Binding var value: Double
     let configuration: Configuration
@@ -29,8 +14,6 @@ public struct GlassNumPad<
     let pickerContent: PickerContent
     let actionContent: ActionContent
 
-    // MARK: - State
-
     enum Mode: Equatable { case numpad, calculator, picker }
 
     @State private var mode: Mode = .numpad
@@ -39,7 +22,19 @@ public struct GlassNumPad<
     @State private var calculator = CalculatorEngine()
     @State private var isCapsuleExpanded = false
 
-    // MARK: - Full initializer
+    // MARK: - Sizes
+
+    private var buttonSize: CGFloat {
+        Configuration.computeButtonSize(spacing: configuration.buttonSpacing)
+    }
+    private var gridWidth: CGFloat {
+        buttonSize * 4 + configuration.buttonSpacing * 3
+    }
+    private var headerHeight: CGFloat { buttonSize + 70 }
+
+    private var isCalc: Bool { mode == .calculator }
+
+    // MARK: - Init
 
     public init(
         value: Binding<Double>,
@@ -61,43 +56,34 @@ public struct GlassNumPad<
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Number display
-            NumberDisplay(
-                text: currentDisplay,
-                isCalculatorMode: mode == .calculator
-            )
-            .frame(height: mode == .calculator ? 64 : 80)
-            .animation(.interactiveSpring(duration: 0.35), value: mode)
+            headerZone
+                .frame(height: headerHeight)
+                .clipped()
+                .padding(.horizontal, 20)
 
-            // Capsule (hidden in calculator mode or when no label provided)
-            if mode != .calculator, configuration.showCapsule,
-               !(CapsuleLabel.self == EmptyView.self) {
-                CapsuleBar(
-                    isExpanded: $isCapsuleExpanded,
-                    accentColor: configuration.accentColor,
-                    label: { capsuleLabel }
-                )
-                .padding(.top, 8)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
+            Spacer().frame(height: configuration.buttonSpacing)
 
-            Spacer().frame(height: 12)
-
-            // Switchable content area
-            Group {
-                switch mode {
-                case .numpad:     numPadGrid
-                case .calculator: calculatorGrid
-                case .picker:
-                    ScrollView {
-                        pickerContent.padding(.top, 4)
-                    }
+            if mode == .picker {
+                ScrollView {
+                    pickerContent.padding(.top, 4)
                 }
+                .frame(height: buttonSize * 4 + configuration.buttonSpacing * 3)
+                .padding(.horizontal, 20)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                    removal: .move(edge: .bottom).combined(with: .opacity)
+                ))
+            } else {
+                digitAndBottomRows
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    ))
             }
-            .transition(.opacity)
         }
-        .padding(.horizontal, configuration.horizontalPadding)
-        .padding(.bottom, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 20)
+        .frame(maxWidth: .infinity)
         .onAppear {
             displayString = CalculatorEngine.format(value)
             isSelectAll = true
@@ -110,127 +96,259 @@ public struct GlassNumPad<
     }
 
     private var currentDisplay: String {
-        mode == .calculator ? calculator.display : displayString
+        isCalc ? calculator.display : displayString
     }
 
-    // MARK: - Numpad grid
+    // MARK: - Header zone (fixed height)
 
-    private var numPadGrid: some View {
+    private var headerZone: some View {
+        VStack(spacing: 0) {
+            NumberDisplay(text: currentDisplay, isCalculatorMode: isCalc)
+                .frame(maxHeight: .infinity)
+
+            if isCalc {
+                Spacer().frame(height: 10)
+                operatorRow.frame(height: buttonSize)
+            } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
+                CapsuleBar(
+                    isExpanded: $isCapsuleExpanded,
+                    accentColor: configuration.accentColor,
+                    label: { capsuleLabel }
+                )
+            }
+        }
+        .animation(.interactiveSpring(duration: 0.35), value: mode)
+    }
+
+    // MARK: - Operator row (slides in from top)
+
+    private var operatorRow: some View {
         let s = configuration.buttonSpacing
-        return Grid(horizontalSpacing: s, verticalSpacing: s) {
-            GridRow {
-                digit(7); digit(8); digit(9)
-                btn(.standard, action: deleteAction) {
-                    Image(systemName: "delete.backward")
+        let sz = buttonSize
+        return HStack(spacing: s) {
+            btn(.standard, CGSize(width: sz * 2 + s, height: sz),
+                action: { Haptic.medium(); calcDelete() }) {
+                Image(systemName: "delete.backward")
+            }
+            btn(.clear, sz, action: { Haptic.medium(); calcClear() }) { Text("C") }
+            btn(.operator, sz, action: { Haptic.light(); calcOp(.divide) }) {
+                Image(systemName: "divide")
+            }
+        }
+        .frame(width: gridWidth)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    // MARK: - Digit rows + bottom (always same Y)
+
+    private var digitAndBottomRows: some View {
+        let s = configuration.buttonSpacing
+        let sz = buttonSize
+        return VStack(spacing: s) {
+            HStack(spacing: s) { digit(7, sz); digit(8, sz); digit(9, sz); rightButton(row: 0, size: sz) }
+            HStack(spacing: s) { digit(4, sz); digit(5, sz); digit(6, sz); rightButton(row: 1, size: sz) }
+            HStack(spacing: s) { digit(1, sz); digit(2, sz); digit(3, sz); rightButton(row: 2, size: sz) }
+            bottomRow
+        }
+        .frame(width: gridWidth)
+    }
+
+    // MARK: - Right column: persistent background, content cross-fades
+
+    private func rightButton(row: Int, size: CGFloat) -> some View {
+        let cr = configuration.buttonCornerRadius
+
+        let fg: Color = {
+            if isCalc { return configuration.accentColor }
+            if row == 1 { return configuration.clearColor }
+            return .white
+        }()
+
+        return Button {
+            rightButtonAction(row: row)
+        } label: {
+            ZStack {
+                // Numpad labels
+                Group {
+                    switch row {
+                    case 0:  Image(systemName: "delete.backward")
+                    case 1:  Text("C")
+                    default: Text(".")
+                    }
                 }
-            }
-            GridRow {
-                digit(4); digit(5); digit(6)
-                btn(.clear, action: clearAction) { Text("C") }
-            }
-            GridRow {
-                digit(1); digit(2); digit(3)
-                btn(.standard, action: decimalAction) { Text(".") }
-            }
-            GridRow {
-                btn(.standard, action: { digitInput(0) }) { Text("0") }
-                    .gridCellColumns(2)
-                btn(.standard, action: enterCalculatorMode) {
-                    Image(systemName: "plus.forwardslash.minus")
+                .opacity(isCalc ? 0 : 1)
+
+                // Calculator labels
+                Group {
+                    switch row {
+                    case 0:  Image(systemName: "multiply")
+                    case 1:  Image(systemName: "minus")
+                    default: Image(systemName: "plus")
+                    }
                 }
-                actionButtonCell
+                .opacity(isCalc ? 1 : 0)
+            }
+            .font(.system(size: 30, weight: .medium, design: .rounded))
+            .foregroundStyle(fg)
+            .frame(width: size, height: size)
+            .background(standardBg(cr))
+        }
+        .buttonStyle(NumPadPressStyle())
+        .animation(.easeInOut(duration: 0.3), value: mode)
+    }
+
+    private func rightButtonAction(row: Int) {
+        if isCalc {
+            Haptic.light()
+            switch row {
+            case 0:  calcOp(.multiply)
+            case 1:  calcOp(.subtract)
+            default: calcOp(.add)
+            }
+        } else {
+            switch row {
+            case 0:  deleteAction()
+            case 1:  clearAction()
+            default: decimalAction()
             }
         }
     }
 
-    // MARK: - Calculator grid
+    // MARK: - Bottom row: 0 width animates, content cross-fades
 
-    private var calculatorGrid: some View {
+    private var bottomRow: some View {
         let s = configuration.buttonSpacing
-        return Grid(horizontalSpacing: s, verticalSpacing: s) {
-            GridRow {
-                btn(.standard, action: calcDelete) {
-                    Image(systemName: "delete.backward")
-                }
-                .gridCellColumns(2)
-                btn(.clear, action: calcClear) { Text("C") }
-                btn(.operator, action: { calcOp(.divide) }) {
-                    Image(systemName: "divide")
-                }
-            }
-            GridRow {
-                cDigit(7); cDigit(8); cDigit(9)
-                btn(.operator, action: { calcOp(.multiply) }) {
-                    Image(systemName: "multiply")
-                }
-            }
-            GridRow {
-                cDigit(4); cDigit(5); cDigit(6)
-                btn(.operator, action: { calcOp(.subtract) }) {
-                    Image(systemName: "minus")
-                }
-            }
-            GridRow {
-                cDigit(1); cDigit(2); cDigit(3)
-                btn(.operator, action: { calcOp(.add) }) {
-                    Image(systemName: "plus")
-                }
-            }
-            GridRow {
-                cDigit(0)
-                btn(.standard, action: calcDecimal) { Text(".") }
-                btn(.standard, action: exitCalculatorMode) {
-                    Image(systemName: "number")
-                }
-                btn(.prominent, action: evaluateExpression) {
-                    Image(systemName: "equal")
-                }
-            }
-        }
-    }
+        let sz = buttonSize
+        let cr = configuration.buttonCornerRadius
 
-    // MARK: - Action button cell
+        return HStack(spacing: s) {
+            // ── 0 button: width animates between double and single ──
+            Button { Haptic.light(); handleDigit(0) } label: {
+                Text("0")
+                    .font(.system(size: 30, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(standardBg(cr))
+            }
+            .buttonStyle(NumPadPressStyle())
+            .frame(width: isCalc ? sz : sz * 2 + s, height: sz)
+
+            // ── Period: slides in from behind the 0 ──
+            if isCalc {
+                btn(.standard, sz, action: { Haptic.light(); calcDecimal() }) { Text(".") }
+                    .transition(.asymmetric(
+                        insertion: .push(from: .leading),
+                        removal: .push(from: .trailing)
+                    ))
+            }
+
+            // ── +/− or #: persistent button, content cross-fades ──
+            Button {
+                if isCalc { exitCalculatorMode() } else { enterCalculatorMode() }
+            } label: {
+                ZStack {
+                    Image(systemName: "plus.forwardslash.minus").opacity(isCalc ? 0 : 1)
+                    Image(systemName: "number").opacity(isCalc ? 1 : 0)
+                }
+                .font(.system(size: 30, weight: .medium, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: sz, height: sz)
+                .background(standardBg(cr))
+            }
+            .buttonStyle(NumPadPressStyle())
+
+            // ── Action or =: persistent button, content cross-fades ──
+            actionOrEquals(sz, cr)
+        }
+        .animation(.interactiveSpring(duration: 0.35), value: mode)
+    }
 
     @ViewBuilder
-    private var actionButtonCell: some View {
-        let kind: ButtonKind = {
-            switch configuration.actionButtonStyle {
-            case .dashed:    return .dashed
-            case .standard:  return .standard
-            case .prominent: return .prominent
+    private func actionOrEquals(_ sz: CGFloat, _ cr: CGFloat) -> some View {
+        let isProminent = configuration.actionButtonStyle == .prominent && !isCalc
+        let isDashed = configuration.actionButtonStyle == .dashed && !isCalc
+
+        Button {
+            if isCalc { evaluateExpression() } else { Haptic.medium(); onAction() }
+        } label: {
+            ZStack {
+                actionContent.opacity(isCalc ? 0 : 1)
+                Image(systemName: "equal")
+                    .foregroundStyle(configuration.accentColor)
+                    .opacity(isCalc ? 1 : 0)
             }
-        }()
-        if ActionContent.self == EmptyView.self {
-            btn(kind, action: {}) { Color.clear }
-                .hidden()
-        } else {
-            btn(kind, action: onAction) { actionContent }
+            .font(.system(size: 30, weight: .medium, design: .rounded))
+            .foregroundStyle(isProminent ? .white : (isDashed ? .white.opacity(0.4) : .white))
+            .frame(width: sz, height: sz)
+            .background(
+                ZStack {
+                    // Standard fill (shown in calc mode or standard style)
+                    standardBg(cr).opacity(isCalc || (!isProminent && !isDashed) ? 1 : 0)
+                    // Prominent fill
+                    RoundedRectangle(cornerRadius: cr, style: .continuous)
+                        .fill(configuration.accentColor.gradient)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cr, style: .continuous)
+                                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+                        )
+                        .opacity(isProminent ? 1 : 0)
+                    // Dashed
+                    RoundedRectangle(cornerRadius: cr, style: .continuous)
+                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                        .foregroundStyle(.white.opacity(0.2))
+                        .opacity(isDashed ? 1 : 0)
+                }
+            )
         }
+        .buttonStyle(NumPadPressStyle())
+        .animation(.easeInOut(duration: 0.3), value: mode)
+    }
+
+    // MARK: - Shared button background
+
+    private func standardBg(_ cr: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: cr, style: .continuous)
+            .fill(.white.opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: cr, style: .continuous)
+                    .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+            )
     }
 
     // MARK: - Button helpers
 
     private func btn<L: View>(
-        _ kind: ButtonKind,
+        _ kind: ButtonKind, _ size: CGFloat,
         action: @escaping () -> Void,
         @ViewBuilder label: () -> L
     ) -> some View {
         NumPadButtonView(
-            kind: kind,
-            accentColor: configuration.accentColor,
+            kind: kind, accentColor: configuration.accentColor,
             clearColor: configuration.clearColor,
             cornerRadius: configuration.buttonCornerRadius,
-            action: action,
-            label: label
-        )
+            action: action, label: label
+        ).frame(width: size, height: size)
     }
 
-    private func digit(_ d: Int) -> some View {
-        btn(.standard, action: { digitInput(d) }) { Text("\(d)") }
+    private func btn<L: View>(
+        _ kind: ButtonKind, _ size: CGSize,
+        action: @escaping () -> Void,
+        @ViewBuilder label: () -> L
+    ) -> some View {
+        NumPadButtonView(
+            kind: kind, accentColor: configuration.accentColor,
+            clearColor: configuration.clearColor,
+            cornerRadius: configuration.buttonCornerRadius,
+            action: action, label: label
+        ).frame(width: size.width, height: size.height)
     }
 
-    private func cDigit(_ d: Int) -> some View {
-        btn(.standard, action: { calcDigitInput(d) }) { Text("\(d)") }
+    private func digit(_ d: Int, _ size: CGFloat) -> some View {
+        btn(.standard, size, action: { Haptic.light(); handleDigit(d) }) { Text("\(d)") }
+    }
+
+    private func handleDigit(_ d: Int) {
+        if isCalc { calculator.inputDigit(d) } else { digitInput(d) }
     }
 
     // MARK: - Numpad actions
@@ -248,154 +366,82 @@ public struct GlassNumPad<
     }
 
     private func decimalAction() {
-        if isSelectAll {
-            displayString = "0."
-            isSelectAll = false
-        } else if !displayString.contains(".") {
-            displayString += "."
-        }
+        Haptic.light()
+        if isSelectAll { displayString = "0."; isSelectAll = false }
+        else if !displayString.contains(".") { displayString += "." }
     }
 
     private func deleteAction() {
-        if isSelectAll {
-            displayString = "0"
-            isSelectAll = false
-        } else if displayString.count > 1 {
-            displayString.removeLast()
-        } else {
-            displayString = "0"
-        }
+        Haptic.medium()
+        if isSelectAll { displayString = "0"; isSelectAll = false }
+        else if displayString.count > 1 { displayString.removeLast() }
+        else { displayString = "0" }
         syncValue()
     }
 
     private func clearAction() {
-        displayString = "0"
-        isSelectAll = true
-        syncValue()
+        Haptic.medium()
+        displayString = "0"; isSelectAll = true; syncValue()
     }
 
-    private func syncValue() {
-        value = Double(displayString) ?? 0
-    }
+    private func syncValue() { value = Double(displayString) ?? 0 }
 
     // MARK: - Calculator actions
 
     private func enterCalculatorMode() {
+        Haptic.medium()
         calculator = CalculatorEngine(initialValue: Double(displayString) ?? 0)
-        withAnimation(.interactiveSpring(duration: 0.35)) {
-            mode = .calculator
-        }
+        withAnimation(.interactiveSpring(duration: 0.35)) { mode = .calculator }
     }
 
     private func exitCalculatorMode() {
+        Haptic.medium()
         let result = calculator.currentValue
         displayString = CalculatorEngine.format(result)
-        value = result
-        isSelectAll = true
-        withAnimation(.interactiveSpring(duration: 0.35)) {
-            mode = .numpad
-        }
+        value = result; isSelectAll = true
+        withAnimation(.interactiveSpring(duration: 0.35)) { mode = .numpad }
     }
 
-    private func calcDigitInput(_ d: Int) {
-        calculator.inputDigit(d)
-    }
-
-    private func calcDecimal() {
-        calculator.inputDecimal()
-    }
-
-    private func calcDelete() {
-        calculator.delete()
-    }
-
-    private func calcClear() {
-        calculator.clear()
-    }
-
-    private func calcOp(_ op: CalculatorEngine.Operator) {
-        calculator.inputOperator(op)
-    }
-
-    private func evaluateExpression() {
-        let result = calculator.evaluate()
-        value = result
-    }
+    private func calcDecimal() { calculator.inputDecimal() }
+    private func calcDelete()  { calculator.delete() }
+    private func calcClear()   { calculator.clear() }
+    private func calcOp(_ op: CalculatorEngine.Operator) { calculator.inputOperator(op) }
+    private func evaluateExpression() { Haptic.heavy(); value = calculator.evaluate() }
 }
 
-// MARK: - Convenience: no capsule
+// MARK: - Convenience initializers
 
 public extension GlassNumPad where CapsuleLabel == EmptyView, PickerContent == EmptyView {
-    init(
-        value: Binding<Double>,
-        configuration: Configuration = .init(),
-        @ViewBuilder actionButton: () -> ActionContent,
-        onAction: @escaping () -> Void = {}
-    ) {
-        self.init(
-            value: value,
-            configuration: .init(
-                accentColor: configuration.accentColor,
-                clearColor: configuration.clearColor,
-                sheetHeight: configuration.sheetHeight,
-                buttonCornerRadius: configuration.buttonCornerRadius,
-                buttonSpacing: configuration.buttonSpacing,
-                horizontalPadding: configuration.horizontalPadding,
-                actionButtonStyle: configuration.actionButtonStyle,
-                showCapsule: false
-            ),
-            capsuleLabel: { EmptyView() },
-            pickerContent: { EmptyView() },
-            actionButton: actionButton,
-            onAction: onAction
-        )
+    init(value: Binding<Double>, configuration: Configuration = .init(),
+         @ViewBuilder actionButton: () -> ActionContent, onAction: @escaping () -> Void = {}) {
+        self.init(value: value,
+                  configuration: .init(accentColor: configuration.accentColor, clearColor: configuration.clearColor,
+                                       sheetHeight: configuration.sheetHeight, buttonCornerRadius: configuration.buttonCornerRadius,
+                                       buttonSpacing: configuration.buttonSpacing, actionButtonStyle: configuration.actionButtonStyle,
+                                       showCapsule: false),
+                  capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
+                  actionButton: actionButton, onAction: onAction)
     }
 }
-
-// MARK: - Convenience: no action button
 
 public extension GlassNumPad where ActionContent == EmptyView {
-    init(
-        value: Binding<Double>,
-        configuration: Configuration = .init(),
-        @ViewBuilder capsuleLabel: () -> CapsuleLabel,
-        @ViewBuilder pickerContent: () -> PickerContent
-    ) {
-        self.init(
-            value: value,
-            configuration: configuration,
-            capsuleLabel: capsuleLabel,
-            pickerContent: pickerContent,
-            actionButton: { EmptyView() },
-            onAction: {}
-        )
+    init(value: Binding<Double>, configuration: Configuration = .init(),
+         @ViewBuilder capsuleLabel: () -> CapsuleLabel, @ViewBuilder pickerContent: () -> PickerContent) {
+        self.init(value: value, configuration: configuration,
+                  capsuleLabel: capsuleLabel, pickerContent: pickerContent,
+                  actionButton: { EmptyView() }, onAction: {})
     }
 }
-
-// MARK: - Convenience: bare
 
 public extension GlassNumPad
 where CapsuleLabel == EmptyView, PickerContent == EmptyView, ActionContent == EmptyView {
-    init(
-        value: Binding<Double>,
-        configuration: Configuration = .init()
-    ) {
-        self.init(
-            value: value,
-            configuration: .init(
-                accentColor: configuration.accentColor,
-                clearColor: configuration.clearColor,
-                sheetHeight: configuration.sheetHeight,
-                buttonCornerRadius: configuration.buttonCornerRadius,
-                buttonSpacing: configuration.buttonSpacing,
-                horizontalPadding: configuration.horizontalPadding,
-                actionButtonStyle: configuration.actionButtonStyle,
-                showCapsule: false
-            ),
-            capsuleLabel: { EmptyView() },
-            pickerContent: { EmptyView() },
-            actionButton: { EmptyView() },
-            onAction: {}
-        )
+    init(value: Binding<Double>, configuration: Configuration = .init()) {
+        self.init(value: value,
+                  configuration: .init(accentColor: configuration.accentColor, clearColor: configuration.clearColor,
+                                       sheetHeight: configuration.sheetHeight, buttonCornerRadius: configuration.buttonCornerRadius,
+                                       buttonSpacing: configuration.buttonSpacing, actionButtonStyle: configuration.actionButtonStyle,
+                                       showCapsule: false),
+                  capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
+                  actionButton: { EmptyView() }, onAction: {})
     }
 }

@@ -9,14 +9,14 @@ struct NumberDisplay: View {
     var body: some View {
         Text(text)
             .font(.system(
-                size: isCalculatorMode ? 48 : 56,
-                weight: .semibold,
+                size: isCalculatorMode ? 48 : 64,
+                weight: .bold,
                 design: .rounded
             ))
-            .foregroundStyle(.primary)
+            .foregroundStyle(.white)
             .lineLimit(1)
             .minimumScaleFactor(0.4)
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            .frame(maxWidth: .infinity, alignment: .center)
             .padding(.horizontal, 8)
             .contentTransition(.numericText())
             .animation(.interactiveSpring(duration: 0.3), value: text)

@@ -2,42 +2,25 @@ import SwiftUI
 
 public extension GlassNumPad {
 
-    /// Styling options for the custom action button in the bottom-right corner.
     enum ActionButtonStyle {
-        /// Dashed border outline, no fill.
-        case dashed
-        /// Standard gray fill matching number buttons.
-        case standard
-        /// Accent-colored fill with white foreground.
-        case prominent
+        case dashed, standard, prominent
     }
 
-    /// Configuration for a ``GlassNumPad`` instance.
     struct Configuration {
-        /// The accent color used for prominent buttons and highlights.
         public var accentColor: Color
-        /// The color used for the clear (C) button text.
         public var clearColor: Color
-        /// Height of the presentation sheet detent.
         public var sheetHeight: CGFloat
-        /// Corner radius for individual buttons.
         public var buttonCornerRadius: CGFloat
-        /// Spacing between buttons in the grid.
         public var buttonSpacing: CGFloat
-        /// Horizontal padding around the entire pad.
-        public var horizontalPadding: CGFloat
-        /// Style applied to the custom action button slot.
         public var actionButtonStyle: ActionButtonStyle
-        /// Whether to show the capsule bar below the number display.
         public var showCapsule: Bool
 
         public init(
             accentColor: Color = .blue,
             clearColor: Color = .orange,
-            sheetHeight: CGFloat = 480,
-            buttonCornerRadius: CGFloat = 12,
-            buttonSpacing: CGFloat = 8,
-            horizontalPadding: CGFloat = 16,
+            sheetHeight: CGFloat = 0,
+            buttonCornerRadius: CGFloat = 20,
+            buttonSpacing: CGFloat = 10,
             actionButtonStyle: ActionButtonStyle = .prominent,
             showCapsule: Bool = true
         ) {
@@ -46,9 +29,24 @@ public extension GlassNumPad {
             self.sheetHeight = sheetHeight
             self.buttonCornerRadius = buttonCornerRadius
             self.buttonSpacing = buttonSpacing
-            self.horizontalPadding = horizontalPadding
             self.actionButtonStyle = actionButtonStyle
             self.showCapsule = showCapsule
+        }
+
+        /// Button size: capped at 76pt, with minimum 30pt margin per side.
+        static func computeButtonSize(spacing: CGFloat) -> CGFloat {
+            let screenWidth = UIScreen.main.bounds.width
+            let maxSize: CGFloat = 76
+            let minMargin: CGFloat = 30
+            return min(maxSize, floor((screenWidth - 2 * minMargin - 3 * spacing) / 4))
+        }
+
+        public var resolvedSheetHeight: CGFloat {
+            if sheetHeight > 0 { return sheetHeight }
+            let btn = Self.computeButtonSize(spacing: buttonSpacing)
+            let headerH = btn + 70
+            // top(8) + header + spacing + 4 rows + 3 gaps + bottom(20) + handle+safe(50)
+            return 78 + headerH + 4 * btn + 4 * buttonSpacing
         }
     }
 }

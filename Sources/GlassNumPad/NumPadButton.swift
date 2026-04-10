@@ -1,20 +1,9 @@
 import SwiftUI
 
-/// The visual style applied to a single numpad button.
 enum ButtonKind {
-    /// Standard gray fill with primary-colored label (numbers, period, #, +/−, ⌫).
-    case standard
-    /// Gray fill with a custom-colored label (clear button).
-    case clear
-    /// Gray fill with accent-colored label (operators ÷ × − +).
-    case `operator`
-    /// Accent fill with white label (=, prominent action).
-    case prominent
-    /// Dashed border outline, no fill.
-    case dashed
+    case standard, clear, `operator`, prominent, dashed
 }
 
-/// A single button in the ``GlassNumPad`` grid.
 struct NumPadButtonView<Label: View>: View {
 
     let kind: ButtonKind
@@ -43,43 +32,52 @@ struct NumPadButtonView<Label: View>: View {
     var body: some View {
         Button(action: action) {
             label
-                .font(.system(size: 26, weight: .medium, design: .rounded))
+                .font(.system(size: 30, weight: .medium, design: .rounded))
                 .foregroundStyle(foregroundColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(background)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NumPadPressStyle())
     }
-
-    // MARK: - Styling
 
     private var foregroundColor: Color {
         switch kind {
-        case .standard:  return .primary
+        case .standard:  return .white
         case .clear:     return clearColor
         case .operator:  return accentColor
         case .prominent: return .white
-        case .dashed:    return .secondary
+        case .dashed:    return .white.opacity(0.4)
         }
     }
 
     @ViewBuilder
     private var background: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         switch kind {
         case .prominent:
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(accentColor.gradient)
-        case .dashed:
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                .foregroundStyle(.secondary.opacity(0.5))
-        default:
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
+            shape.fill(accentColor.gradient)
                 .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
+                    shape.strokeBorder(.white.opacity(0.12), lineWidth: 1)
+                )
+        case .dashed:
+            shape
+                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                .foregroundStyle(.white.opacity(0.2))
+        default:
+            shape
+                .fill(.white.opacity(0.08))
+                .overlay(
+                    shape.strokeBorder(.white.opacity(0.1), lineWidth: 1)
                 )
         }
+    }
+}
+
+struct NumPadPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.5 : 1)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }

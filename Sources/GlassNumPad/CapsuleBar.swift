@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The pill-shaped bar beneath the number display that hosts custom content
-/// (e.g., a unit picker label). Tapping toggles between collapsed and expanded states.
 struct CapsuleBar<Label: View>: View {
 
     @Binding var isExpanded: Bool
@@ -10,30 +8,29 @@ struct CapsuleBar<Label: View>: View {
 
     var body: some View {
         Button {
+            Haptic.medium()
             withAnimation(.interactiveSpring(duration: 0.35)) {
                 isExpanded.toggle()
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 label()
+                    .foregroundStyle(isExpanded ? accentColor : .white.opacity(0.7))
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(isExpanded ? accentColor : .secondary)
-                Spacer()
+                    .foregroundStyle(isExpanded ? accentColor : .white.opacity(0.4))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
             .background {
                 Capsule(style: .continuous)
                     .fill(isExpanded
-                        ? accentColor.opacity(0.18)
-                        : Color.primary.opacity(0.08)
+                        ? accentColor.opacity(0.2)
+                        : .white.opacity(0.08)
                     )
                     .overlay(
                         Capsule(style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .opacity(isExpanded ? 0 : 1)
+                            .strokeBorder(.white.opacity(0.1), lineWidth: 1)
                     )
             }
         }
