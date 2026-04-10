@@ -116,4 +116,4 @@ The capsule expands and the numpad is replaced with your custom picker content (
 
 ## License
 
-MIT
+[WTFPL](http://www.wtfpl.net/)
