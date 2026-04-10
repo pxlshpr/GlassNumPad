@@ -1,0 +1,54 @@
+{
+  "": {
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/primary.swiftdeps"
+  },
+  "/Users/pxlshpr/Developer/Packages/GlassNumPad/Sources/GlassNumPad/CalculatorEngine.swift": {
+    "dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CalculatorEngine.d",
+    "object": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CalculatorEngine.swift.o",
+    "swiftmodule": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CalculatorEngine~partial.swiftmodule",
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CalculatorEngine.swiftdeps",
+    "diagnostics": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CalculatorEngine.dia"
+  },
+  "/Users/pxlshpr/Developer/Packages/GlassNumPad/Sources/GlassNumPad/CapsuleBar.swift": {
+    "dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CapsuleBar.d",
+    "object": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CapsuleBar.swift.o",
+    "swiftmodule": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CapsuleBar~partial.swiftmodule",
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CapsuleBar.swiftdeps",
+    "diagnostics": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/CapsuleBar.dia"
+  },
+  "/Users/pxlshpr/Developer/Packages/GlassNumPad/Sources/GlassNumPad/Configuration.swift": {
+    "dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/Configuration.d",
+    "object": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/Configuration.swift.o",
+    "swiftmodule": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/Configuration~partial.swiftmodule",
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/Configuration.swiftdeps",
+    "diagnostics": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/Configuration.dia"
+  },
+  "/Users/pxlshpr/Developer/Packages/GlassNumPad/Sources/GlassNumPad/GlassNumPad.swift": {
+    "dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/GlassNumPad.d",
+    "object": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/GlassNumPad.swift.o",
+    "swiftmodule": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/GlassNumPad~partial.swiftmodule",
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/GlassNumPad.swiftdeps",
+    "diagnostics": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/GlassNumPad.dia"
+  },
+  "/Users/pxlshpr/Developer/Packages/GlassNumPad/Sources/GlassNumPad/NumPadButton.swift": {
+    "dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumPadButton.d",
+    "object": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumPadButton.swift.o",
+    "swiftmodule": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumPadButton~partial.swiftmodule",
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumPadButton.swiftdeps",
+    "diagnostics": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumPadButton.dia"
+  },
+  "/Users/pxlshpr/Developer/Packages/GlassNumPad/Sources/GlassNumPad/NumberDisplay.swift": {
+    "dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumberDisplay.d",
+    "object": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumberDisplay.swift.o",
+    "swiftmodule": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumberDisplay~partial.swiftmodule",
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumberDisplay.swiftdeps",
+    "diagnostics": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/NumberDisplay.dia"
+  },
+  "/Users/pxlshpr/Developer/Packages/GlassNumPad/Sources/GlassNumPad/SheetModifier.swift": {
+    "dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/SheetModifier.d",
+    "object": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/SheetModifier.swift.o",
+    "swiftmodule": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/SheetModifier~partial.swiftmodule",
+    "swift-dependencies": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/SheetModifier.swiftdeps",
+    "diagnostics": "/Users/pxlshpr/Developer/Packages/GlassNumPad/.build/arm64-apple-macosx/debug/GlassNumPad.build/SheetModifier.dia"
+  }
+}

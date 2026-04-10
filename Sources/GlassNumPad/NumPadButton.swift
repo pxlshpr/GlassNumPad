@@ -22,11 +22,27 @@ struct NumPadButtonView<Label: View>: View {
     let clearColor: Color
     let cornerRadius: CGFloat
     let action: () -> Void
-    @ViewBuilder let label: () -> Label
+    let label: Label
+
+    init(
+        kind: ButtonKind,
+        accentColor: Color,
+        clearColor: Color,
+        cornerRadius: CGFloat,
+        action: @escaping () -> Void,
+        @ViewBuilder label: () -> Label
+    ) {
+        self.kind = kind
+        self.accentColor = accentColor
+        self.clearColor = clearColor
+        self.cornerRadius = cornerRadius
+        self.action = action
+        self.label = label()
+    }
 
     var body: some View {
         Button(action: action) {
-            label()
+            label
                 .font(.system(size: 26, weight: .medium, design: .rounded))
                 .foregroundStyle(foregroundColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
