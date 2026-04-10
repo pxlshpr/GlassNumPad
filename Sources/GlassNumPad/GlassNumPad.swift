@@ -82,7 +82,7 @@ public struct GlassNumPad<
             }
         }
         .padding(.top, 8)
-        .padding(.bottom, 20)
+        .padding(.bottom, 10)
         .frame(maxWidth: .infinity)
         .onAppear {
             displayString = CalculatorEngine.format(value)
@@ -125,15 +125,40 @@ public struct GlassNumPad<
     private var operatorRow: some View {
         let s = configuration.buttonSpacing
         let sz = buttonSize
+        let cr = configuration.buttonCornerRadius
         return HStack(spacing: s) {
-            btn(.standard, CGSize(width: sz * 2 + s, height: sz),
-                action: { Haptic.medium(); calcDelete() }) {
+            // ⌫ — smaller icon (22pt)
+            Button { Haptic.medium(); calcDelete() } label: {
                 Image(systemName: "delete.backward")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(standardBg(cr))
             }
-            btn(.clear, sz, action: { Haptic.medium(); calcClear() }) { Text("C") }
-            btn(.operator, sz, action: { Haptic.light(); calcOp(.divide) }) {
+            .buttonStyle(NumPadPressStyle())
+            .frame(width: sz * 2 + s, height: sz)
+
+            // C — smaller font (24pt)
+            Button { Haptic.medium(); calcClear() } label: {
+                Text("C")
+                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    .foregroundStyle(configuration.clearColor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(standardBg(cr))
+            }
+            .buttonStyle(NumPadPressStyle())
+            .frame(width: sz, height: sz)
+
+            // ÷ — smaller icon (22pt)
+            Button { Haptic.light(); calcOp(.divide) } label: {
                 Image(systemName: "divide")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(configuration.accentColor)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(standardBg(cr))
             }
+            .buttonStyle(NumPadPressStyle())
+            .frame(width: sz, height: sz)
         }
         .frame(width: gridWidth)
         .transition(.move(edge: .top).combined(with: .opacity))
@@ -158,12 +183,6 @@ public struct GlassNumPad<
     private func rightButton(row: Int, size: CGFloat) -> some View {
         let cr = configuration.buttonCornerRadius
 
-        let fg: Color = {
-            if isCalc { return configuration.accentColor }
-            if row == 1 { return configuration.clearColor }
-            return .white
-        }()
-
         return Button {
             rightButtonAction(row: row)
         } label: {
@@ -171,9 +190,18 @@ public struct GlassNumPad<
                 // Numpad labels
                 Group {
                     switch row {
-                    case 0:  Image(systemName: "delete.backward")
-                    case 1:  Text("C")
-                    default: Text(".")
+                    case 0:
+                        Image(systemName: "delete.backward")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(.white)
+                    case 1:
+                        Text("C")
+                            .font(.system(size: 24, weight: .semibold, design: .rounded))
+                            .foregroundStyle(configuration.clearColor)
+                    default:
+                        Text(".")
+                            .font(.system(size: 30, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white)
                     }
                 }
                 .opacity(isCalc ? 0 : 1)
@@ -181,15 +209,22 @@ public struct GlassNumPad<
                 // Calculator labels
                 Group {
                     switch row {
-                    case 0:  Image(systemName: "multiply")
-                    case 1:  Image(systemName: "minus")
-                    default: Image(systemName: "plus")
+                    case 0:
+                        Image(systemName: "multiply")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(configuration.accentColor)
+                    case 1:
+                        Image(systemName: "minus")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(configuration.accentColor)
+                    default:
+                        Image(systemName: "plus")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(configuration.accentColor)
                     }
                 }
                 .opacity(isCalc ? 1 : 0)
             }
-            .font(.system(size: 30, weight: .medium, design: .rounded))
-            .foregroundStyle(fg)
             .frame(width: size, height: size)
             .background(standardBg(cr))
         }
@@ -247,10 +282,13 @@ public struct GlassNumPad<
                 if isCalc { exitCalculatorMode() } else { enterCalculatorMode() }
             } label: {
                 ZStack {
-                    Image(systemName: "plus.forwardslash.minus").opacity(isCalc ? 0 : 1)
-                    Image(systemName: "number").opacity(isCalc ? 1 : 0)
+                    Image(systemName: "plus.forwardslash.minus")
+                        .font(.system(size: 22, weight: .medium))
+                        .opacity(isCalc ? 0 : 1)
+                    Image(systemName: "number")
+                        .font(.system(size: 22, weight: .medium))
+                        .opacity(isCalc ? 1 : 0)
                 }
-                .font(.system(size: 30, weight: .medium, design: .rounded))
                 .foregroundStyle(.white)
                 .frame(width: sz, height: sz)
                 .background(standardBg(cr))
@@ -274,6 +312,7 @@ public struct GlassNumPad<
             ZStack {
                 actionContent.opacity(isCalc ? 0 : 1)
                 Image(systemName: "equal")
+                    .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(configuration.accentColor)
                     .opacity(isCalc ? 1 : 0)
             }
@@ -282,8 +321,17 @@ public struct GlassNumPad<
             .frame(width: sz, height: sz)
             .background(
                 ZStack {
-                    // Standard fill (shown in calc mode or standard style)
-                    standardBg(cr).opacity(isCalc || (!isProminent && !isDashed) ? 1 : 0)
+                    // Subtle accent highlight for = in calculator mode
+                    RoundedRectangle(cornerRadius: cr, style: .continuous)
+                        .fill(configuration.accentColor.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cr, style: .continuous)
+                                .strokeBorder(configuration.accentColor.opacity(0.3), lineWidth: 1)
+                        )
+                        .opacity(isCalc ? 1 : 0)
+                    // Standard fill (non-calc, standard style)
+                    standardBg(cr)
+                        .opacity(isCalc ? 0 : (!isProminent && !isDashed ? 1 : 0))
                     // Prominent fill
                     RoundedRectangle(cornerRadius: cr, style: .continuous)
                         .fill(configuration.accentColor.gradient)

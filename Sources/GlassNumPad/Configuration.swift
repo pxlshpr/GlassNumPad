@@ -45,8 +45,8 @@ public extension GlassNumPad {
             if sheetHeight > 0 { return sheetHeight }
             let btn = Self.computeButtonSize(spacing: buttonSpacing)
             let headerH = btn + 70
-            // top(8) + header + spacing + 4 rows + 3 gaps + bottom(20) + handle+safe(50)
-            return 78 + headerH + 4 * btn + 4 * buttonSpacing
+            // top(8) + header + spacing + 4 rows + 3 gaps + bottom(10) + handle+safe(44)
+            return 8 + headerH + 4 * btn + 4 * buttonSpacing + 10 + 44
         }
     }
 }
