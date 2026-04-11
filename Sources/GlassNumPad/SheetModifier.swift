@@ -25,7 +25,7 @@ public extension View {
             )
             .presentationDetents([.height(configuration.resolvedSheetHeight)])
             .presentationDragIndicator(.visible)
-            .presentationBackground(.clear)
+            .presentationBackground(.ultraThinMaterial)
         }
     }
 

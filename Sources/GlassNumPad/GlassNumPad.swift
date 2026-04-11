@@ -6,6 +6,8 @@ public struct GlassNumPad<
     ActionContent: View
 >: View {
 
+    @Environment(\.colorScheme) private var colorScheme
+
     @Binding var value: Double
     let configuration: Configuration
     let onAction: () -> Void
@@ -21,6 +23,15 @@ public struct GlassNumPad<
     @State private var isSelectAll = true
     @State private var calculator = CalculatorEngine()
     @State private var isCapsuleExpanded = false
+
+    /// Foreground tint — white on dark, near-black on light.
+    private var fg: Color { colorScheme == .dark ? .white : Color(.label) }
+    /// Subtle foreground for secondary elements.
+    private var fgSoft: Color { fg.opacity(colorScheme == .dark ? 0.7 : 0.5) }
+    /// Button fill color.
+    private var btnFill: Color { colorScheme == .dark ? .white.opacity(0.08) : Color(.label).opacity(0.06) }
+    /// Button border color.
+    private var btnBorder: Color { colorScheme == .dark ? .white.opacity(0.1) : Color(.label).opacity(0.08) }
 
     // MARK: - Sizes
 
@@ -65,10 +76,12 @@ public struct GlassNumPad<
 
             if mode == .picker {
                 ScrollView {
-                    pickerContent.padding(.top, 4)
+                    pickerContent
+                        .padding(.top, 4)
+                        .padding(.horizontal, 20)
                 }
+                .scrollBounceBehavior(.basedOnSize)
                 .frame(height: buttonSize * 4 + configuration.buttonSpacing * 3)
-                .padding(.horizontal, 20)
                 .transition(.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
                     removal: .move(edge: .bottom).combined(with: .opacity)
@@ -96,7 +109,7 @@ public struct GlassNumPad<
     }
 
     private var currentDisplay: String {
-        isCalc ? calculator.display : displayString
+        isCalc ? calculator.expression : displayString
     }
 
     // MARK: - Header zone (fixed height)
@@ -131,7 +144,7 @@ public struct GlassNumPad<
             Button { Haptic.medium(); calcDelete() } label: {
                 Image(systemName: "delete.backward")
                     .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(fg)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(standardBg(cr))
             }
@@ -193,7 +206,7 @@ public struct GlassNumPad<
                     case 0:
                         Image(systemName: "delete.backward")
                             .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(fg)
                     case 1:
                         Text("C")
                             .font(.system(size: 24, weight: .semibold, design: .rounded))
@@ -201,7 +214,7 @@ public struct GlassNumPad<
                     default:
                         Text(".")
                             .font(.system(size: 30, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(fg)
                     }
                 }
                 .opacity(isCalc ? 0 : 1)
@@ -261,7 +274,7 @@ public struct GlassNumPad<
             Button { Haptic.light(); handleDigit(0) } label: {
                 Text("0")
                     .font(.system(size: 30, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(fg)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(standardBg(cr))
             }
@@ -289,7 +302,7 @@ public struct GlassNumPad<
                         .font(.system(size: 22, weight: .medium))
                         .opacity(isCalc ? 1 : 0)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(fg)
                 .frame(width: sz, height: sz)
                 .background(standardBg(cr))
             }
@@ -307,7 +320,12 @@ public struct GlassNumPad<
         let isDashed = configuration.actionButtonStyle == .dashed && !isCalc
 
         Button {
-            if isCalc { evaluateExpression() } else { Haptic.medium(); onAction() }
+            Haptic.medium()
+            if isCalc {
+                evaluateExpression()
+            } else {
+                onAction()
+            }
         } label: {
             ZStack {
                 actionContent.opacity(isCalc ? 0 : 1)
@@ -317,7 +335,7 @@ public struct GlassNumPad<
                     .opacity(isCalc ? 1 : 0)
             }
             .font(.system(size: 30, weight: .medium, design: .rounded))
-            .foregroundStyle(isProminent ? .white : (isDashed ? .white.opacity(0.4) : .white))
+            .foregroundStyle(isProminent ? .white : (isDashed ? fg.opacity(0.4) : fg))
             .frame(width: sz, height: sz)
             .background(
                 ZStack {
@@ -337,13 +355,13 @@ public struct GlassNumPad<
                         .fill(configuration.accentColor.gradient)
                         .overlay(
                             RoundedRectangle(cornerRadius: cr, style: .continuous)
-                                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+                                .strokeBorder(fg.opacity(0.12), lineWidth: 1)
                         )
                         .opacity(isProminent ? 1 : 0)
                     // Dashed
                     RoundedRectangle(cornerRadius: cr, style: .continuous)
                         .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        .foregroundStyle(.white.opacity(0.2))
+                        .foregroundStyle(fg.opacity(0.2))
                         .opacity(isDashed ? 1 : 0)
                 }
             )
@@ -356,10 +374,10 @@ public struct GlassNumPad<
 
     private func standardBg(_ cr: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: cr, style: .continuous)
-            .fill(.white.opacity(0.08))
+            .fill(btnFill)
             .overlay(
                 RoundedRectangle(cornerRadius: cr, style: .continuous)
-                    .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+                    .strokeBorder(btnBorder, lineWidth: 1)
             )
     }
 

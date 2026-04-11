@@ -6,12 +6,18 @@ enum ButtonKind {
 
 struct NumPadButtonView<Label: View>: View {
 
+    @Environment(\.colorScheme) private var colorScheme
+
     let kind: ButtonKind
     let accentColor: Color
     let clearColor: Color
     let cornerRadius: CGFloat
     let action: () -> Void
     let label: Label
+
+    private var fg: Color { colorScheme == .dark ? .white : Color(.label) }
+    private var btnFill: Color { colorScheme == .dark ? .white.opacity(0.08) : Color(.label).opacity(0.06) }
+    private var btnBorder: Color { colorScheme == .dark ? .white.opacity(0.1) : Color(.label).opacity(0.08) }
 
     init(
         kind: ButtonKind,
@@ -42,11 +48,11 @@ struct NumPadButtonView<Label: View>: View {
 
     private var foregroundColor: Color {
         switch kind {
-        case .standard:  return .white
+        case .standard:  return fg
         case .clear:     return clearColor
         case .operator:  return accentColor
         case .prominent: return .white
-        case .dashed:    return .white.opacity(0.4)
+        case .dashed:    return fg.opacity(0.4)
         }
     }
 
@@ -57,17 +63,17 @@ struct NumPadButtonView<Label: View>: View {
         case .prominent:
             shape.fill(accentColor.gradient)
                 .overlay(
-                    shape.strokeBorder(.white.opacity(0.12), lineWidth: 1)
+                    shape.strokeBorder(fg.opacity(0.12), lineWidth: 1)
                 )
         case .dashed:
             shape
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                .foregroundStyle(.white.opacity(0.2))
+                .foregroundStyle(fg.opacity(0.2))
         default:
             shape
-                .fill(.white.opacity(0.08))
+                .fill(btnFill)
                 .overlay(
-                    shape.strokeBorder(.white.opacity(0.1), lineWidth: 1)
+                    shape.strokeBorder(btnBorder, lineWidth: 1)
                 )
         }
     }

@@ -10,7 +10,12 @@ struct CalculatorEngine {
         case divide = "÷"
     }
 
+    /// The raw operand being typed (NOT shown to the user directly).
     private(set) var display: String = "0"
+
+    /// The full expression string shown to the user (e.g. "5+3").
+    private(set) var expression: String = "0"
+
     private var accumulator: Double = 0
     private var pendingOp: Operator?
     private var isTyping = false
@@ -18,7 +23,9 @@ struct CalculatorEngine {
     /// Initialize with a starting value (carried over from the numpad).
     init(initialValue: Double = 0) {
         accumulator = initialValue
-        display = Self.format(initialValue)
+        let formatted = Self.format(initialValue)
+        display = formatted
+        expression = formatted
     }
 
     // MARK: - Input
@@ -35,6 +42,7 @@ struct CalculatorEngine {
             display = "\(digit)"
             isTyping = true
         }
+        rebuildExpression()
     }
 
     mutating func inputDecimal() {
@@ -44,6 +52,7 @@ struct CalculatorEngine {
         } else if !display.contains(".") {
             display += "."
         }
+        rebuildExpression()
     }
 
     mutating func inputOperator(_ op: Operator) {
@@ -52,7 +61,7 @@ struct CalculatorEngine {
         }
         pendingOp = op
         isTyping = false
-        // display keeps showing the accumulated result — does NOT clear
+        rebuildExpression()
     }
 
     /// Evaluate the pending expression and return the result.
@@ -63,6 +72,7 @@ struct CalculatorEngine {
         }
         pendingOp = nil
         isTyping = false
+        expression = Self.format(accumulator)
         return accumulator
     }
 
@@ -70,6 +80,7 @@ struct CalculatorEngine {
         accumulator = 0
         pendingOp = nil
         display = "0"
+        expression = "0"
         isTyping = false
     }
 
@@ -80,6 +91,7 @@ struct CalculatorEngine {
         } else {
             display = "0"
         }
+        rebuildExpression()
     }
 
     var currentValue: Double {
@@ -90,6 +102,23 @@ struct CalculatorEngine {
     }
 
     // MARK: - Private
+
+    /// Rebuilds the expression string from current state.
+    private mutating func rebuildExpression() {
+        let accStr = Self.format(accumulator)
+        if let op = pendingOp {
+            if isTyping {
+                // e.g. "5+3"
+                expression = accStr + op.rawValue + display
+            } else {
+                // e.g. "5+"
+                expression = accStr + op.rawValue
+            }
+        } else {
+            // No pending op — just show what's being typed or the accumulator
+            expression = isTyping ? display : accStr
+        }
+    }
 
     private mutating func performPending() {
         let inputValue = Double(display) ?? 0
