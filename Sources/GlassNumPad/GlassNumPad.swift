@@ -77,6 +77,11 @@ public struct GlassNumPad<
             if mode == .picker {
                 ScrollView {
                     pickerContent
+                        .environment(\.dismissGlassNumPadPicker, {
+                            withAnimation(.interactiveSpring(duration: 0.35)) {
+                                isCapsuleExpanded = false
+                            }
+                        })
                         .padding(.top, 4)
                         .padding(.horizontal, 20)
                 }
