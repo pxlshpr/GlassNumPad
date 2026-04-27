@@ -462,6 +462,7 @@ public struct GlassNumPad<
         } else if displayString == "0" {
             if digit != 0 { displayString = "\(digit)" }
         } else {
+            guard CalculatorEngine.digitCount(in: displayString) < configuration.maxDigitCount else { return }
             displayString += "\(digit)"
         }
         syncValue()
@@ -488,7 +489,10 @@ public struct GlassNumPad<
     // MARK: - Calculator actions
 
     private func enterCalculatorMode() {
-        calculator = CalculatorEngine(initialValue: Double(displayString) ?? 0)
+        calculator = CalculatorEngine(
+            initialValue: Double(displayString) ?? 0,
+            maxDigitCount: configuration.maxDigitCount
+        )
         withAnimation(.interactiveSpring(duration: 0.35)) { mode = .calculator }
     }
 
@@ -535,7 +539,8 @@ where CapsuleLabel == EmptyView, PickerContent == EmptyView, AuxiliaryContent ==
                   configuration: .init(accentColor: configuration.accentColor, clearColor: configuration.clearColor,
                                        sheetHeight: configuration.sheetHeight, buttonCornerRadius: configuration.buttonCornerRadius,
                                        buttonSpacing: configuration.buttonSpacing, actionButtonStyle: configuration.actionButtonStyle,
-                                       showCapsule: false, showsCalculator: configuration.showsCalculator),
+                                       showCapsule: false, showsCalculator: configuration.showsCalculator,
+                                       maxDigitCount: configuration.maxDigitCount),
                   capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
                   actionButton: actionButton, auxiliaryButton: { EmptyView() },
                   onAction: onAction, onAuxiliaryAction: {})
@@ -559,7 +564,8 @@ where CapsuleLabel == EmptyView, PickerContent == EmptyView, ActionContent == Em
                   configuration: .init(accentColor: configuration.accentColor, clearColor: configuration.clearColor,
                                        sheetHeight: configuration.sheetHeight, buttonCornerRadius: configuration.buttonCornerRadius,
                                        buttonSpacing: configuration.buttonSpacing, actionButtonStyle: configuration.actionButtonStyle,
-                                       showCapsule: false, showsCalculator: configuration.showsCalculator),
+                                       showCapsule: false, showsCalculator: configuration.showsCalculator,
+                                       maxDigitCount: configuration.maxDigitCount),
                   capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
                   actionButton: { EmptyView() }, auxiliaryButton: { EmptyView() },
                   onAction: {}, onAuxiliaryAction: {})

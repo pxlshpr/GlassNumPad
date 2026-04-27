@@ -15,6 +15,10 @@ public extension GlassNumPad {
         public var actionButtonStyle: ActionButtonStyle
         public var showCapsule: Bool
         public var showsCalculator: Bool
+        /// Maximum number of digit characters allowed in a single operand.
+        /// Caps unbounded input from rapid digit tapping. Override to fit
+        /// the contextual range of the value being edited.
+        public var maxDigitCount: Int
 
         public init(
             accentColor: Color = .blue,
@@ -24,7 +28,8 @@ public extension GlassNumPad {
             buttonSpacing: CGFloat = 10,
             actionButtonStyle: ActionButtonStyle = .prominent,
             showCapsule: Bool = true,
-            showsCalculator: Bool = true
+            showsCalculator: Bool = true,
+            maxDigitCount: Int = 12
         ) {
             self.accentColor = accentColor
             self.clearColor = clearColor
@@ -34,6 +39,7 @@ public extension GlassNumPad {
             self.actionButtonStyle = actionButtonStyle
             self.showCapsule = showCapsule
             self.showsCalculator = showsCalculator
+            self.maxDigitCount = maxDigitCount
         }
 
         /// Button size: capped at 76pt, with minimum 30pt margin per side.

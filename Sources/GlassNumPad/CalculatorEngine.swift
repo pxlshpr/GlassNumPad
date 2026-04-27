@@ -4,6 +4,9 @@ import Foundation
 /// and only evaluates when `=` is pressed (left-to-right, no precedence).
 struct CalculatorEngine {
 
+    /// Default cap on digit characters per operand when no explicit limit is supplied.
+    static let defaultMaxDigitCount = 12
+
     enum Operator: String {
         case add = "+"
         case subtract = "−"
@@ -23,12 +26,16 @@ struct CalculatorEngine {
     private var ops: [Operator] = []
     private var isTyping = false
 
+    /// Maximum digit characters allowed in a single operand.
+    var maxDigitCount: Int = CalculatorEngine.defaultMaxDigitCount
+
     /// Initialize with a starting value (carried over from the numpad).
-    init(initialValue: Double = 0) {
+    init(initialValue: Double = 0, maxDigitCount: Int = CalculatorEngine.defaultMaxDigitCount) {
         let formatted = Self.format(initialValue)
         display = formatted
         expression = formatted
         terms = [initialValue]
+        self.maxDigitCount = maxDigitCount
     }
 
     // MARK: - Input
@@ -39,6 +46,7 @@ struct CalculatorEngine {
             if display == "0" {
                 display = "\(digit)"
             } else {
+                guard Self.digitCount(in: display) < maxDigitCount else { return }
                 display += "\(digit)"
             }
         } else {
@@ -56,6 +64,10 @@ struct CalculatorEngine {
             display += "."
         }
         rebuildExpression()
+    }
+
+    static func digitCount(in s: String) -> Int {
+        s.reduce(0) { $1.isNumber ? $0 + 1 : $0 }
     }
 
     mutating func inputOperator(_ op: Operator) {
