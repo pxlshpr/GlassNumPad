@@ -79,11 +79,46 @@ struct NumPadButtonView<Label: View>: View {
     }
 }
 
-struct NumPadPressStyle: ButtonStyle {
+struct NumPadPressStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.5 : 1)
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        NumPadPressBody(configuration: configuration)
+    }
+
+    private struct NumPadPressBody: View {
+        let configuration: PrimitiveButtonStyleConfiguration
+        @State private var isPressed: Bool = false
+        @State private var pressedAt: Date? = nil
+
+        // Releases within this window of press-down feel like a single
+        // haptic when both fire, so we skip the release haptic.
+        private static let minHapticGap: TimeInterval = 0.15
+
+        var body: some View {
+            configuration.label
+                .opacity(isPressed ? 0.5 : 1)
+                .scaleEffect(isPressed ? 0.96 : 1)
+                .animation(.easeOut(duration: 0.12), value: isPressed)
+                .contentShape(Rectangle())
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in
+                            if !isPressed {
+                                isPressed = true
+                                pressedAt = Date()
+                                Haptic.rigid()
+                            }
+                        }
+                        .onEnded { _ in
+                            guard isPressed else { return }
+                            isPressed = false
+                            let elapsed = pressedAt.map { Date().timeIntervalSince($0) } ?? .infinity
+                            pressedAt = nil
+                            if elapsed >= Self.minHapticGap {
+                                Haptic.soft()
+                            }
+                            configuration.trigger()
+                        }
+                )
+        }
     }
 }

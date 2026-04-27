@@ -1,6 +1,7 @@
 import Foundation
 
-/// A simple four-function calculator that evaluates expressions left-to-right.
+/// A simple four-function calculator that builds up a multi-term expression
+/// and only evaluates when `=` is pressed (left-to-right, no precedence).
 struct CalculatorEngine {
 
     enum Operator: String {
@@ -10,22 +11,24 @@ struct CalculatorEngine {
         case divide = "÷"
     }
 
-    /// The raw operand being typed (NOT shown to the user directly).
+    /// The raw operand being typed.
     private(set) var display: String = "0"
 
-    /// The full expression string shown to the user (e.g. "5+3").
+    /// The full expression string shown to the user (e.g. "50+3+7").
     private(set) var expression: String = "0"
 
-    private var accumulator: Double = 0
-    private var pendingOp: Operator?
+    /// Committed terms in the expression.
+    private var terms: [Double] = []
+    /// Operators between terms. Count is always `terms.count` or `terms.count - 1`.
+    private var ops: [Operator] = []
     private var isTyping = false
 
     /// Initialize with a starting value (carried over from the numpad).
     init(initialValue: Double = 0) {
-        accumulator = initialValue
         let formatted = Self.format(initialValue)
         display = formatted
         expression = formatted
+        terms = [initialValue]
     }
 
     // MARK: - Input
@@ -57,28 +60,39 @@ struct CalculatorEngine {
 
     mutating func inputOperator(_ op: Operator) {
         if isTyping {
-            performPending()
+            commitCurrentInput()
+            ops.append(op)
+        } else if ops.count == terms.count {
+            // User changed operator without typing a number — replace last op
+            ops[ops.count - 1] = op
+        } else {
+            // After evaluate or init — just add the operator
+            ops.append(op)
         }
-        pendingOp = op
         isTyping = false
         rebuildExpression()
     }
 
-    /// Evaluate the pending expression and return the result.
+    /// Evaluate the full expression and return the result.
     @discardableResult
     mutating func evaluate() -> Double {
         if isTyping {
-            performPending()
+            commitCurrentInput()
         }
-        pendingOp = nil
+
+        let result = Self.evaluateAll(terms: terms, ops: ops)
+
+        terms = [result]
+        ops = []
         isTyping = false
-        expression = Self.format(accumulator)
-        return accumulator
+        display = Self.format(result)
+        expression = Self.format(result)
+        return result
     }
 
     mutating func clear() {
-        accumulator = 0
-        pendingOp = nil
+        terms = [0]
+        ops = []
         display = "0"
         expression = "0"
         isTyping = false
@@ -94,51 +108,73 @@ struct CalculatorEngine {
         rebuildExpression()
     }
 
+    /// The value that would result if `=` were pressed right now.
     var currentValue: Double {
+        var allTerms = terms
         if isTyping {
-            return Double(display) ?? 0
+            let value = Double(display) ?? 0
+            if ops.count >= allTerms.count {
+                allTerms.append(value)
+            } else {
+                allTerms[allTerms.count - 1] = value
+            }
         }
-        return accumulator
+        return Self.evaluateAll(terms: allTerms, ops: ops)
     }
 
     // MARK: - Private
 
-    /// Rebuilds the expression string from current state.
-    private mutating func rebuildExpression() {
-        let accStr = Self.format(accumulator)
-        if let op = pendingOp {
-            if isTyping {
-                // e.g. "5+3"
-                expression = accStr + op.rawValue + display
-            } else {
-                // e.g. "5+"
-                expression = accStr + op.rawValue
-            }
+    /// Commit the current display as a term.
+    private mutating func commitCurrentInput() {
+        let value = Double(display) ?? 0
+        if ops.count < terms.count {
+            // User typed over the current (last) term — replace it
+            terms[terms.count - 1] = value
         } else {
-            // No pending op — just show what's being typed or the accumulator
-            expression = isTyping ? display : accStr
+            // Pending operator waiting for a new term — append
+            terms.append(value)
         }
+        isTyping = false
     }
 
-    private mutating func performPending() {
-        let inputValue = Double(display) ?? 0
-        var wasDivision = false
-        if let op = pendingOp {
-            switch op {
-            case .add:      accumulator += inputValue
-            case .subtract: accumulator -= inputValue
-            case .multiply: accumulator *= inputValue
-            case .divide:
-                accumulator = inputValue != 0 ? accumulator / inputValue : 0
-                wasDivision = true
+    /// Evaluate terms left-to-right with the given operators.
+    private static func evaluateAll(terms: [Double], ops: [Operator]) -> Double {
+        guard let first = terms.first else { return 0 }
+        var result = first
+        for i in 0..<ops.count {
+            guard i + 1 < terms.count else { break }
+            switch ops[i] {
+            case .add:      result += terms[i + 1]
+            case .subtract: result -= terms[i + 1]
+            case .multiply: result *= terms[i + 1]
+            case .divide:   result = terms[i + 1] != 0 ? result / terms[i + 1] : 0
             }
-        } else {
-            accumulator = inputValue
         }
-        // Division results always show 2 decimal places
-        display = wasDivision
-            ? Self.formatDivision(accumulator)
-            : Self.format(accumulator)
+        return result
+    }
+
+    /// Rebuilds the expression string from current state.
+    private mutating func rebuildExpression() {
+        var expr = ""
+        for i in 0..<terms.count {
+            expr += Self.format(terms[i])
+            if i < ops.count {
+                expr += ops[i].rawValue
+            }
+        }
+        if isTyping {
+            if ops.count >= terms.count {
+                // Typing a new term after an operator
+                expr += display
+            } else {
+                // Typing over the last term — replace the formatted term with display
+                let lastTermStr = Self.format(terms[terms.count - 1])
+                if expr.hasSuffix(lastTermStr) {
+                    expr = String(expr.dropLast(lastTermStr.count)) + display
+                }
+            }
+        }
+        expression = expr.isEmpty ? "0" : expr
     }
 
     static func format(_ value: Double) -> String {
@@ -151,11 +187,5 @@ struct CalculatorEngine {
         while trimmed.hasSuffix("0") { trimmed.removeLast() }
         if trimmed.hasSuffix(".") { trimmed.removeLast() }
         return trimmed
-    }
-
-    /// Always 2 decimal places for division results.
-    static func formatDivision(_ value: Double) -> String {
-        if value == .infinity || value.isNaN { return "0" }
-        return String(format: "%.2f", value)
     }
 }

@@ -3,7 +3,8 @@ import SwiftUI
 public struct GlassNumPad<
     CapsuleLabel: View,
     PickerContent: View,
-    ActionContent: View
+    ActionContent: View,
+    AuxiliaryContent: View
 >: View {
 
     @Environment(\.colorScheme) private var colorScheme
@@ -11,10 +12,12 @@ public struct GlassNumPad<
     @Binding var value: Double
     let configuration: Configuration
     let onAction: () -> Void
+    let onAuxiliaryAction: () -> Void
 
     let capsuleLabel: CapsuleLabel
     let pickerContent: PickerContent
     let actionContent: ActionContent
+    let auxiliaryContent: AuxiliaryContent
 
     enum Mode: Equatable { case numpad, calculator, picker }
 
@@ -53,14 +56,18 @@ public struct GlassNumPad<
         @ViewBuilder capsuleLabel: () -> CapsuleLabel,
         @ViewBuilder pickerContent: () -> PickerContent,
         @ViewBuilder actionButton: () -> ActionContent,
-        onAction: @escaping () -> Void = {}
+        @ViewBuilder auxiliaryButton: () -> AuxiliaryContent,
+        onAction: @escaping () -> Void = {},
+        onAuxiliaryAction: @escaping () -> Void = {}
     ) {
         self._value = value
         self.configuration = configuration
         self.capsuleLabel = capsuleLabel()
         self.pickerContent = pickerContent()
         self.actionContent = actionButton()
+        self.auxiliaryContent = auxiliaryButton()
         self.onAction = onAction
+        self.onAuxiliaryAction = onAuxiliaryAction
     }
 
     // MARK: - Body
@@ -146,7 +153,7 @@ public struct GlassNumPad<
         let cr = configuration.buttonCornerRadius
         return HStack(spacing: s) {
             // ⌫ — smaller icon (22pt)
-            Button { Haptic.medium(); calcDelete() } label: {
+            Button { calcDelete() } label: {
                 Image(systemName: "delete.backward")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(fg)
@@ -157,7 +164,7 @@ public struct GlassNumPad<
             .frame(width: sz * 2 + s, height: sz)
 
             // C — smaller font (24pt)
-            Button { Haptic.medium(); calcClear() } label: {
+            Button { calcClear() } label: {
                 Text("C")
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .foregroundStyle(configuration.clearColor)
@@ -168,7 +175,7 @@ public struct GlassNumPad<
             .frame(width: sz, height: sz)
 
             // ÷ — smaller icon (22pt)
-            Button { Haptic.light(); calcOp(.divide) } label: {
+            Button { calcOp(.divide) } label: {
                 Image(systemName: "divide")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(configuration.accentColor)
@@ -252,7 +259,6 @@ public struct GlassNumPad<
 
     private func rightButtonAction(row: Int) {
         if isCalc {
-            Haptic.light()
             switch row {
             case 0:  calcOp(.multiply)
             case 1:  calcOp(.subtract)
@@ -274,9 +280,22 @@ public struct GlassNumPad<
         let sz = buttonSize
         let cr = configuration.buttonCornerRadius
 
+        // Whether the slot between `0` and the action button is occupied.
+        // - showsCalculator → +/− toggle (or # in calc mode)
+        // - !showsCalculator + non-empty AuxiliaryContent → caller-provided button
+        // - Neither → slot collapses; `0` widens to fill it
+        let hasAux = !(AuxiliaryContent.self == EmptyView.self)
+        let showsAuxSlot = configuration.showsCalculator || hasAux
+
+        // 0 button width:
+        // - calc mode: single (period appears in the slot to its right)
+        // - shows aux slot: double-wide
+        // - no aux slot: triple-wide (fills the missing slot)
+        let zeroWidth: CGFloat = isCalc ? sz : (showsAuxSlot ? sz * 2 + s : sz * 3 + s * 2)
+
         return HStack(spacing: s) {
-            // ── 0 button: width animates between double and single ──
-            Button { Haptic.light(); handleDigit(0) } label: {
+            // ── 0 button: width animates between single, double, triple ──
+            Button { handleDigit(0) } label: {
                 Text("0")
                     .font(.system(size: 30, weight: .medium, design: .rounded))
                     .foregroundStyle(fg)
@@ -284,34 +303,47 @@ public struct GlassNumPad<
                     .background(standardBg(cr))
             }
             .buttonStyle(NumPadPressStyle())
-            .frame(width: isCalc ? sz : sz * 2 + s, height: sz)
+            .frame(width: zeroWidth, height: sz)
 
             // ── Period: slides in from behind the 0 ──
             if isCalc {
-                btn(.standard, sz, action: { Haptic.light(); calcDecimal() }) { Text(".") }
+                btn(.standard, sz, action: { calcDecimal() }) { Text(".") }
                     .transition(.asymmetric(
                         insertion: .push(from: .leading),
                         removal: .push(from: .trailing)
                     ))
             }
 
-            // ── +/− or #: persistent button, content cross-fades ──
-            Button {
-                if isCalc { exitCalculatorMode() } else { enterCalculatorMode() }
-            } label: {
-                ZStack {
-                    Image(systemName: "plus.forwardslash.minus")
-                        .font(.system(size: 22, weight: .medium))
-                        .opacity(isCalc ? 0 : 1)
-                    Image(systemName: "number")
-                        .font(.system(size: 22, weight: .medium))
-                        .opacity(isCalc ? 1 : 0)
+            // ── Aux slot: +/− (calc on), # (in calc mode), or caller-provided button ──
+            if showsAuxSlot {
+                if configuration.showsCalculator {
+                    Button {
+                        if isCalc { exitCalculatorMode() } else { enterCalculatorMode() }
+                    } label: {
+                        ZStack {
+                            Image(systemName: "plus.forwardslash.minus")
+                                .font(.system(size: 22, weight: .medium))
+                                .opacity(isCalc ? 0 : 1)
+                            Image(systemName: "number")
+                                .font(.system(size: 22, weight: .medium))
+                                .opacity(isCalc ? 1 : 0)
+                        }
+                        .foregroundStyle(fg)
+                        .frame(width: sz, height: sz)
+                        .background(standardBg(cr))
+                    }
+                    .buttonStyle(NumPadPressStyle())
+                } else {
+                    Button {
+                        onAuxiliaryAction()
+                    } label: {
+                        auxiliaryContent
+                            .frame(width: sz, height: sz)
+                            .background(standardBg(cr))
+                    }
+                    .buttonStyle(NumPadPressStyle())
                 }
-                .foregroundStyle(fg)
-                .frame(width: sz, height: sz)
-                .background(standardBg(cr))
             }
-            .buttonStyle(NumPadPressStyle())
 
             // ── Action or =: persistent button, content cross-fades ──
             actionOrEquals(sz, cr)
@@ -325,7 +357,6 @@ public struct GlassNumPad<
         let isDashed = configuration.actionButtonStyle == .dashed && !isCalc
 
         Button {
-            Haptic.medium()
             if isCalc {
                 evaluateExpression()
             } else {
@@ -415,7 +446,7 @@ public struct GlassNumPad<
     }
 
     private func digit(_ d: Int, _ size: CGFloat) -> some View {
-        btn(.standard, size, action: { Haptic.light(); handleDigit(d) }) { Text("\(d)") }
+        btn(.standard, size, action: { handleDigit(d) }) { Text("\(d)") }
     }
 
     private func handleDigit(_ d: Int) {
@@ -437,13 +468,11 @@ public struct GlassNumPad<
     }
 
     private func decimalAction() {
-        Haptic.light()
         if isSelectAll { displayString = "0."; isSelectAll = false }
         else if !displayString.contains(".") { displayString += "." }
     }
 
     private func deleteAction() {
-        Haptic.medium()
         if isSelectAll { displayString = "0"; isSelectAll = false }
         else if displayString.count > 1 { displayString.removeLast() }
         else { displayString = "0" }
@@ -451,7 +480,6 @@ public struct GlassNumPad<
     }
 
     private func clearAction() {
-        Haptic.medium()
         displayString = "0"; isSelectAll = true; syncValue()
     }
 
@@ -460,13 +488,11 @@ public struct GlassNumPad<
     // MARK: - Calculator actions
 
     private func enterCalculatorMode() {
-        Haptic.medium()
         calculator = CalculatorEngine(initialValue: Double(displayString) ?? 0)
         withAnimation(.interactiveSpring(duration: 0.35)) { mode = .calculator }
     }
 
     private func exitCalculatorMode() {
-        Haptic.medium()
         let result = calculator.currentValue
         displayString = CalculatorEngine.format(result)
         value = result; isSelectAll = true
@@ -477,42 +503,65 @@ public struct GlassNumPad<
     private func calcDelete()  { calculator.delete() }
     private func calcClear()   { calculator.clear() }
     private func calcOp(_ op: CalculatorEngine.Operator) { calculator.inputOperator(op) }
-    private func evaluateExpression() { Haptic.heavy(); value = calculator.evaluate() }
+    private func evaluateExpression() { value = calculator.evaluate() }
 }
 
 // MARK: - Convenience initializers
 
-public extension GlassNumPad where CapsuleLabel == EmptyView, PickerContent == EmptyView {
+public extension GlassNumPad where AuxiliaryContent == EmptyView {
+    /// Standard initializer — no auxiliary button (matches pre-aux callers).
+    init(
+        value: Binding<Double>,
+        configuration: Configuration = .init(),
+        @ViewBuilder capsuleLabel: () -> CapsuleLabel,
+        @ViewBuilder pickerContent: () -> PickerContent,
+        @ViewBuilder actionButton: () -> ActionContent,
+        onAction: @escaping () -> Void = {}
+    ) {
+        self.init(
+            value: value, configuration: configuration,
+            capsuleLabel: capsuleLabel, pickerContent: pickerContent,
+            actionButton: actionButton, auxiliaryButton: { EmptyView() },
+            onAction: onAction, onAuxiliaryAction: {}
+        )
+    }
+}
+
+public extension GlassNumPad
+where CapsuleLabel == EmptyView, PickerContent == EmptyView, AuxiliaryContent == EmptyView {
     init(value: Binding<Double>, configuration: Configuration = .init(),
          @ViewBuilder actionButton: () -> ActionContent, onAction: @escaping () -> Void = {}) {
         self.init(value: value,
                   configuration: .init(accentColor: configuration.accentColor, clearColor: configuration.clearColor,
                                        sheetHeight: configuration.sheetHeight, buttonCornerRadius: configuration.buttonCornerRadius,
                                        buttonSpacing: configuration.buttonSpacing, actionButtonStyle: configuration.actionButtonStyle,
-                                       showCapsule: false),
+                                       showCapsule: false, showsCalculator: configuration.showsCalculator),
                   capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
-                  actionButton: actionButton, onAction: onAction)
+                  actionButton: actionButton, auxiliaryButton: { EmptyView() },
+                  onAction: onAction, onAuxiliaryAction: {})
     }
 }
 
-public extension GlassNumPad where ActionContent == EmptyView {
+public extension GlassNumPad where ActionContent == EmptyView, AuxiliaryContent == EmptyView {
     init(value: Binding<Double>, configuration: Configuration = .init(),
          @ViewBuilder capsuleLabel: () -> CapsuleLabel, @ViewBuilder pickerContent: () -> PickerContent) {
         self.init(value: value, configuration: configuration,
                   capsuleLabel: capsuleLabel, pickerContent: pickerContent,
-                  actionButton: { EmptyView() }, onAction: {})
+                  actionButton: { EmptyView() }, auxiliaryButton: { EmptyView() },
+                  onAction: {}, onAuxiliaryAction: {})
     }
 }
 
 public extension GlassNumPad
-where CapsuleLabel == EmptyView, PickerContent == EmptyView, ActionContent == EmptyView {
+where CapsuleLabel == EmptyView, PickerContent == EmptyView, ActionContent == EmptyView, AuxiliaryContent == EmptyView {
     init(value: Binding<Double>, configuration: Configuration = .init()) {
         self.init(value: value,
                   configuration: .init(accentColor: configuration.accentColor, clearColor: configuration.clearColor,
                                        sheetHeight: configuration.sheetHeight, buttonCornerRadius: configuration.buttonCornerRadius,
                                        buttonSpacing: configuration.buttonSpacing, actionButtonStyle: configuration.actionButtonStyle,
-                                       showCapsule: false),
+                                       showCapsule: false, showsCalculator: configuration.showsCalculator),
                   capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
-                  actionButton: { EmptyView() }, onAction: {})
+                  actionButton: { EmptyView() }, auxiliaryButton: { EmptyView() },
+                  onAction: {}, onAuxiliaryAction: {})
     }
 }
