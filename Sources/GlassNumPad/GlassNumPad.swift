@@ -79,9 +79,12 @@ public struct GlassNumPad<
     public var body: some View {
         VStack(spacing: 0) {
             if !(Header.self == EmptyView.self) {
+                // Constrain the header to the digit-grid width so callers can
+                // style a container (e.g. rounded material rect) that visually
+                // aligns with the keypad button columns.
                 header
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 4)
+                    .frame(width: gridWidth)
+                    .padding(.bottom, 8)
             }
 
             headerZone
