@@ -4,7 +4,8 @@ public struct GlassNumPad<
     CapsuleLabel: View,
     PickerContent: View,
     ActionContent: View,
-    AuxiliaryContent: View
+    AuxiliaryContent: View,
+    Header: View
 >: View {
 
     @Environment(\.colorScheme) private var colorScheme
@@ -18,6 +19,7 @@ public struct GlassNumPad<
     let pickerContent: PickerContent
     let actionContent: ActionContent
     let auxiliaryContent: AuxiliaryContent
+    let header: Header
 
     enum Mode: Equatable { case numpad, calculator, picker }
 
@@ -57,6 +59,7 @@ public struct GlassNumPad<
         @ViewBuilder pickerContent: () -> PickerContent,
         @ViewBuilder actionButton: () -> ActionContent,
         @ViewBuilder auxiliaryButton: () -> AuxiliaryContent,
+        @ViewBuilder header: () -> Header,
         onAction: @escaping () -> Void = {},
         onAuxiliaryAction: @escaping () -> Void = {}
     ) {
@@ -66,6 +69,7 @@ public struct GlassNumPad<
         self.pickerContent = pickerContent()
         self.actionContent = actionButton()
         self.auxiliaryContent = auxiliaryButton()
+        self.header = header()
         self.onAction = onAction
         self.onAuxiliaryAction = onAuxiliaryAction
     }
@@ -74,6 +78,12 @@ public struct GlassNumPad<
 
     public var body: some View {
         VStack(spacing: 0) {
+            if !(Header.self == EmptyView.self) {
+                header
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 4)
+            }
+
             headerZone
                 .frame(height: headerHeight)
                 .clipped()
@@ -110,8 +120,32 @@ public struct GlassNumPad<
         .padding(.bottom, 10)
         .frame(maxWidth: .infinity)
         .onAppear {
-            displayString = CalculatorEngine.format(value)
-            isSelectAll = true
+            // Initial sync — bypass any inherited animation context (e.g. the sheet's
+            // present spring) so the readout snaps to its starting value instead of
+            // sliding via numericText.
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) {
+                displayString = CalculatorEngine.format(value)
+                isSelectAll = true
+            }
+        }
+        .onChange(of: value) { _, newValue in
+            // External value change (e.g. caller opened the pad on a different item):
+            // resync the display. Also silenced so re-presentation doesn't show a
+            // numericText scrub from the previous value to the new one. Internal
+            // typing produces a `value` that already matches the formatted display,
+            // so this branch is skipped for internal edits and their own animation
+            // (NumberDisplay's contentTransition) still applies.
+            let formatted = CalculatorEngine.format(newValue)
+            if formatted != displayString {
+                var t = Transaction()
+                t.disablesAnimations = true
+                withTransaction(t) {
+                    displayString = formatted
+                    isSelectAll = true
+                }
+            }
         }
         .onChange(of: isCapsuleExpanded) { _, expanded in
             withAnimation(.interactiveSpring(duration: 0.35)) {
@@ -512,8 +546,8 @@ public struct GlassNumPad<
 
 // MARK: - Convenience initializers
 
-public extension GlassNumPad where AuxiliaryContent == EmptyView {
-    /// Standard initializer — no auxiliary button (matches pre-aux callers).
+public extension GlassNumPad where AuxiliaryContent == EmptyView, Header == EmptyView {
+    /// Standard initializer — no auxiliary button, no header (matches pre-aux callers).
     init(
         value: Binding<Double>,
         configuration: Configuration = .init(),
@@ -526,13 +560,14 @@ public extension GlassNumPad where AuxiliaryContent == EmptyView {
             value: value, configuration: configuration,
             capsuleLabel: capsuleLabel, pickerContent: pickerContent,
             actionButton: actionButton, auxiliaryButton: { EmptyView() },
+            header: { EmptyView() },
             onAction: onAction, onAuxiliaryAction: {}
         )
     }
 }
 
 public extension GlassNumPad
-where CapsuleLabel == EmptyView, PickerContent == EmptyView, AuxiliaryContent == EmptyView {
+where CapsuleLabel == EmptyView, PickerContent == EmptyView, AuxiliaryContent == EmptyView, Header == EmptyView {
     init(value: Binding<Double>, configuration: Configuration = .init(),
          @ViewBuilder actionButton: () -> ActionContent, onAction: @escaping () -> Void = {}) {
         self.init(value: value,
@@ -543,22 +578,24 @@ where CapsuleLabel == EmptyView, PickerContent == EmptyView, AuxiliaryContent ==
                                        maxDigitCount: configuration.maxDigitCount),
                   capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
                   actionButton: actionButton, auxiliaryButton: { EmptyView() },
+                  header: { EmptyView() },
                   onAction: onAction, onAuxiliaryAction: {})
     }
 }
 
-public extension GlassNumPad where ActionContent == EmptyView, AuxiliaryContent == EmptyView {
+public extension GlassNumPad where ActionContent == EmptyView, AuxiliaryContent == EmptyView, Header == EmptyView {
     init(value: Binding<Double>, configuration: Configuration = .init(),
          @ViewBuilder capsuleLabel: () -> CapsuleLabel, @ViewBuilder pickerContent: () -> PickerContent) {
         self.init(value: value, configuration: configuration,
                   capsuleLabel: capsuleLabel, pickerContent: pickerContent,
                   actionButton: { EmptyView() }, auxiliaryButton: { EmptyView() },
+                  header: { EmptyView() },
                   onAction: {}, onAuxiliaryAction: {})
     }
 }
 
 public extension GlassNumPad
-where CapsuleLabel == EmptyView, PickerContent == EmptyView, ActionContent == EmptyView, AuxiliaryContent == EmptyView {
+where CapsuleLabel == EmptyView, PickerContent == EmptyView, ActionContent == EmptyView, AuxiliaryContent == EmptyView, Header == EmptyView {
     init(value: Binding<Double>, configuration: Configuration = .init()) {
         self.init(value: value,
                   configuration: .init(accentColor: configuration.accentColor, clearColor: configuration.clearColor,
@@ -568,6 +605,7 @@ where CapsuleLabel == EmptyView, PickerContent == EmptyView, ActionContent == Em
                                        maxDigitCount: configuration.maxDigitCount),
                   capsuleLabel: { EmptyView() }, pickerContent: { EmptyView() },
                   actionButton: { EmptyView() }, auxiliaryButton: { EmptyView() },
+                  header: { EmptyView() },
                   onAction: {}, onAuxiliaryAction: {})
     }
 }
