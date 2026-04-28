@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "GlassNumPad",
     platforms: [
-        .iOS(.v17)
+        .iOS("26.0")
     ],
     products: [
         .library(
