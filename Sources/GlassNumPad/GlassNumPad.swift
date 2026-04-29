@@ -28,6 +28,7 @@ public struct GlassNumPad<
     @State private var isSelectAll = true
     @State private var calculator = CalculatorEngine()
     @State private var isCapsuleExpanded = false
+    @State private var didApplyInitialMode = false
 
     /// Foreground tint — white on dark, near-black on light.
     private var fg: Color { colorScheme == .dark ? .white : Color(.label) }
@@ -131,6 +132,14 @@ public struct GlassNumPad<
             withTransaction(t) {
                 displayString = CalculatorEngine.format(value)
                 isSelectAll = true
+            }
+            // Honor configuration.startsInPicker on first appearance — the
+            // capsule expansion drives the mode change via the existing
+            // onChange handler, so re-presenting the same instance still
+            // respects whatever state the user left it in.
+            if configuration.startsInPicker, !didApplyInitialMode {
+                didApplyInitialMode = true
+                isCapsuleExpanded = true
             }
         }
         .onChange(of: value) { _, newValue in

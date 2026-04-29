@@ -19,6 +19,10 @@ public extension GlassNumPad {
         /// Caps unbounded input from rapid digit tapping. Override to fit
         /// the contextual range of the value being edited.
         public var maxDigitCount: Int
+        /// When true, the pad opens in picker mode (capsule pre-expanded) so
+        /// callers whose primary input is a discrete picker (e.g. RPE values
+        /// 6–10 in 0.5 steps) skip the digit grid on first appearance.
+        public var startsInPicker: Bool
 
         public init(
             accentColor: Color = .blue,
@@ -29,7 +33,8 @@ public extension GlassNumPad {
             actionButtonStyle: ActionButtonStyle = .prominent,
             showCapsule: Bool = true,
             showsCalculator: Bool = true,
-            maxDigitCount: Int = 12
+            maxDigitCount: Int = 12,
+            startsInPicker: Bool = false
         ) {
             self.accentColor = accentColor
             self.clearColor = clearColor
@@ -40,6 +45,7 @@ public extension GlassNumPad {
             self.showCapsule = showCapsule
             self.showsCalculator = showsCalculator
             self.maxDigitCount = maxDigitCount
+            self.startsInPicker = startsInPicker
         }
 
         /// Button size: capped at 76pt, with minimum 30pt margin per side.
