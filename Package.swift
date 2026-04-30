@@ -13,15 +13,7 @@ let package = Package(
             targets: ["GlassNumPad"]
         ),
     ],
-    dependencies: [
-        .package(url: "https://github.com/pxlshpr/RemoteLogger", from: "1.0.0"),
-    ],
     targets: [
-        .target(
-            name: "GlassNumPad",
-            dependencies: [
-                .product(name: "RemoteLogger", package: "RemoteLogger"),
-            ]
-        ),
+        .target(name: "GlassNumPad"),
     ]
 )
