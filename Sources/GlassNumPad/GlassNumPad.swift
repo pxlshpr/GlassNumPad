@@ -132,11 +132,15 @@ public struct GlassNumPad<
             withTransaction(t) {
                 displayString = CalculatorEngine.format(value)
                 isSelectAll = true
+                // Always open at the standard numpad on (re-)presentation, even
+                // if the user left the pad in calculator mode previously. The
+                // engine is rebuilt in enterCalculatorMode() so no reset needed
+                // here.
+                if mode == .calculator { mode = .numpad }
             }
-            // Honor configuration.startsInPicker on first appearance — the
-            // capsule expansion drives the mode change via the existing
-            // onChange handler, so re-presenting the same instance still
-            // respects whatever state the user left it in.
+            // Honor configuration.startsInPicker on first appearance only —
+            // the capsule expansion drives the mode change via the existing
+            // onChange handler.
             if configuration.startsInPicker, !didApplyInitialMode {
                 didApplyInitialMode = true
                 isCapsuleExpanded = true
@@ -502,9 +506,12 @@ public struct GlassNumPad<
     }
 
     private func deleteAction() {
-        if isSelectAll { displayString = "0"; isSelectAll = false }
-        else if displayString.count > 1 { displayString.removeLast() }
+        // Backspace removes the last digit even when the field is in
+        // select-all (initial-presentation) state — the previous behavior of
+        // wiping to "0" surprised users who expected a single-digit delete.
+        if displayString.count > 1 { displayString.removeLast() }
         else { displayString = "0" }
+        isSelectAll = false
         syncValue()
     }
 

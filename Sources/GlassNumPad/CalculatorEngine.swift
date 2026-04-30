@@ -111,7 +111,10 @@ struct CalculatorEngine {
     }
 
     mutating func delete() {
-        guard isTyping else { return }
+        // First backspace on the seeded value transitions us into typing
+        // mode so subsequent edits replace the original term rather than
+        // appending to it; previously the guard short-circuited entirely.
+        isTyping = true
         if display.count > 1 {
             display.removeLast()
         } else {
