@@ -202,6 +202,11 @@ private struct GlassNumPadPresentation<
     let onAuxiliaryAction: () -> Void
 
     @State private var dragOffset: CGFloat = 0
+    // Bumped every time the pad becomes visible so the inner view is given a
+    // fresh identity (and thus fresh @State) on every present. Without this,
+    // SwiftUI's transition/animation keeps the dismissed view alive long
+    // enough for state like `mode` to leak across presentations.
+    @State private var presentationID: Int = 0
 
     private static var presentSpring: Animation {
         .spring(response: 0.35, dampingFraction: 0.85)
@@ -213,11 +218,15 @@ private struct GlassNumPadPresentation<
                 ZStack(alignment: .bottom) {
                     if isPresented {
                         sheet
+                            .id(presentationID)
                             .transition(.move(edge: .bottom))
                     }
                 }
                 .animation(Self.presentSpring, value: isPresented)
                 .ignoresSafeArea(.container, edges: .bottom)
+            }
+            .onChange(of: isPresented) { _, presented in
+                if presented { presentationID &+= 1 }
             }
     }
 

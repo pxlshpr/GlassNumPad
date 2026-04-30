@@ -125,22 +125,18 @@ public struct GlassNumPad<
         .frame(maxWidth: .infinity)
         .onAppear {
             // Initial sync — bypass any inherited animation context (e.g. the sheet's
-            // present spring) so the readout snaps to its starting value instead of
-            // sliding via numericText.
+            // present spring) so the readout snaps to its starting value and the
+            // pad always opens at the standard numpad regardless of where the
+            // user left it last time.
             var t = Transaction()
             t.disablesAnimations = true
             withTransaction(t) {
                 displayString = CalculatorEngine.format(value)
                 isSelectAll = true
-                // Always open at the standard numpad on (re-)presentation, even
-                // if the user left the pad in calculator mode previously. The
-                // engine is rebuilt in enterCalculatorMode() so no reset needed
-                // here.
-                if mode == .calculator { mode = .numpad }
+                mode = .numpad
+                isCapsuleExpanded = false
             }
-            // Honor configuration.startsInPicker on first appearance only —
-            // the capsule expansion drives the mode change via the existing
-            // onChange handler.
+            // Honor configuration.startsInPicker on first appearance only.
             if configuration.startsInPicker, !didApplyInitialMode {
                 didApplyInitialMode = true
                 isCapsuleExpanded = true
