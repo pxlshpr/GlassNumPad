@@ -370,7 +370,7 @@ public struct GlassNumPad<
                             Image(systemName: "plus.forwardslash.minus")
                                 .font(.system(size: 22, weight: .medium))
                                 .opacity(isCalc ? 0 : 1)
-                            Image(systemName: "number")
+                            Image(systemName: "equal")
                                 .font(.system(size: 22, weight: .medium))
                                 .opacity(isCalc ? 1 : 0)
                         }
@@ -399,57 +399,39 @@ public struct GlassNumPad<
 
     @ViewBuilder
     private func actionOrEquals(_ sz: CGFloat, _ cr: CGFloat) -> some View {
-        let isProminent = configuration.actionButtonStyle == .prominent && !isCalc
-        let isDashed = configuration.actionButtonStyle == .dashed && !isCalc
+        let isProminent = configuration.actionButtonStyle == .prominent
+        let isDashed = configuration.actionButtonStyle == .dashed
 
         Button {
-            if isCalc {
-                evaluateExpression()
-            } else {
-                onAction()
-            }
+            // In calc mode, auto-evaluate any pending expression and return to
+            // numpad mode so the caller sees the final value. The aux-slot "="
+            // is the explicit evaluate-and-stay path; this path commits.
+            if isCalc { exitCalculatorMode() }
+            onAction()
         } label: {
-            ZStack {
-                actionContent.opacity(isCalc ? 0 : 1)
-                Image(systemName: "equal")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(configuration.accentColor)
-                    .opacity(isCalc ? 1 : 0)
-            }
-            .font(.system(size: 30, weight: .medium, design: .rounded))
-            .foregroundStyle(isProminent ? .white : (isDashed ? fg.opacity(0.4) : fg))
-            .frame(width: sz, height: sz)
-            .background(
-                ZStack {
-                    // Subtle accent highlight for = in calculator mode
-                    RoundedRectangle(cornerRadius: cr, style: .continuous)
-                        .fill(configuration.accentColor.opacity(0.15))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: cr, style: .continuous)
-                                .strokeBorder(configuration.accentColor.opacity(0.3), lineWidth: 1)
-                        )
-                        .opacity(isCalc ? 1 : 0)
-                    // Standard fill (non-calc, standard style)
-                    standardBg(cr)
-                        .opacity(isCalc ? 0 : (!isProminent && !isDashed ? 1 : 0))
-                    // Prominent fill
-                    RoundedRectangle(cornerRadius: cr, style: .continuous)
-                        .fill(configuration.accentColor.gradient)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: cr, style: .continuous)
-                                .strokeBorder(fg.opacity(0.12), lineWidth: 1)
-                        )
-                        .opacity(isProminent ? 1 : 0)
-                    // Dashed
-                    RoundedRectangle(cornerRadius: cr, style: .continuous)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        .foregroundStyle(fg.opacity(0.2))
-                        .opacity(isDashed ? 1 : 0)
-                }
-            )
+            actionContent
+                .font(.system(size: 30, weight: .medium, design: .rounded))
+                .foregroundStyle(isProminent ? .white : (isDashed ? fg.opacity(0.4) : fg))
+                .frame(width: sz, height: sz)
+                .background(
+                    ZStack {
+                        standardBg(cr)
+                            .opacity(!isProminent && !isDashed ? 1 : 0)
+                        RoundedRectangle(cornerRadius: cr, style: .continuous)
+                            .fill(configuration.accentColor.gradient)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: cr, style: .continuous)
+                                    .strokeBorder(fg.opacity(0.12), lineWidth: 1)
+                            )
+                            .opacity(isProminent ? 1 : 0)
+                        RoundedRectangle(cornerRadius: cr, style: .continuous)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                            .foregroundStyle(fg.opacity(0.2))
+                            .opacity(isDashed ? 1 : 0)
+                    }
+                )
         }
         .buttonStyle(NumPadPressStyle())
-        .animation(.easeInOut(duration: 0.3), value: mode)
     }
 
     // MARK: - Shared button background
@@ -553,7 +535,6 @@ public struct GlassNumPad<
     private func calcDelete()  { calculator.delete() }
     private func calcClear()   { calculator.clear() }
     private func calcOp(_ op: CalculatorEngine.Operator) { calculator.inputOperator(op) }
-    private func evaluateExpression() { value = calculator.evaluate() }
 }
 
 // MARK: - Convenience initializers
