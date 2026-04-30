@@ -1,4 +1,5 @@
 import SwiftUI
+import RemoteLogger
 
 // MARK: - View modifier for overlay-based presentation
 
@@ -218,6 +219,12 @@ private struct GlassNumPadPresentation<
                 }
                 .animation(Self.presentSpring, value: isPresented)
                 .ignoresSafeArea(.container, edges: .bottom)
+            }
+            .onChange(of: isPresented) { oldValue, newValue in
+                RemoteLogger.shared.info(
+                    "isPresented \(oldValue) → \(newValue) (value=\(value))",
+                    category: "glassnumpad"
+                )
             }
     }
 

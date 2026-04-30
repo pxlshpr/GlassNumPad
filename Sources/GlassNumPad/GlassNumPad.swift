@@ -1,4 +1,5 @@
 import SwiftUI
+import RemoteLogger
 
 public struct GlassNumPad<
     CapsuleLabel: View,
@@ -124,6 +125,10 @@ public struct GlassNumPad<
         .padding(.bottom, 10)
         .frame(maxWidth: .infinity)
         .onAppear {
+            RemoteLogger.shared.info(
+                "onAppear — value=\(value) displayString=\(displayString) mode=\(mode) calc.expression=\(calculator.expression) isCapsuleExpanded=\(isCapsuleExpanded)",
+                category: "glassnumpad"
+            )
             // Initial sync — bypass any inherited animation context (e.g. the sheet's
             // present spring) so the readout snaps to its starting value instead of
             // sliding via numericText.
@@ -140,6 +145,10 @@ public struct GlassNumPad<
                 didApplyInitialMode = true
                 isCapsuleExpanded = true
             }
+            RemoteLogger.shared.info(
+                "onAppear DONE — displayString=\(displayString) mode=\(mode)",
+                category: "glassnumpad"
+            )
         }
         .onChange(of: value) { _, newValue in
             // External value change (e.g. caller opened the pad on a different
@@ -151,7 +160,12 @@ public struct GlassNumPad<
             // display, so this branch is skipped for internal edits and their
             // animations (NumberDisplay's contentTransition) still apply.
             let formatted = CalculatorEngine.format(newValue)
-            if formatted != displayString {
+            let willReset = formatted != displayString
+            RemoteLogger.shared.info(
+                "onChange(value) — newValue=\(newValue) formatted=\(formatted) displayString=\(displayString) mode=\(mode) willReset=\(willReset)",
+                category: "glassnumpad"
+            )
+            if willReset {
                 var t = Transaction()
                 t.disablesAnimations = true
                 withTransaction(t) {
@@ -168,6 +182,10 @@ public struct GlassNumPad<
             }
         }
         .onDisappear {
+            RemoteLogger.shared.info(
+                "onDisappear — mode=\(mode) calc.expression=\(calculator.expression) isCapsuleExpanded=\(isCapsuleExpanded)",
+                category: "glassnumpad"
+            )
             // value isn't synced from the calculator during in-progress
             // expressions, so a swipe-dismiss while in calc mode leaves the
             // binding unchanged — onChange(of: value) won't fire on the next
@@ -181,6 +199,10 @@ public struct GlassNumPad<
                 isCapsuleExpanded = false
                 calculator = CalculatorEngine()
             }
+            RemoteLogger.shared.info(
+                "onDisappear DONE — mode=\(mode)",
+                category: "glassnumpad"
+            )
         }
     }
 
@@ -538,6 +560,7 @@ public struct GlassNumPad<
     // MARK: - Calculator actions
 
     private func enterCalculatorMode() {
+        RemoteLogger.shared.info("enterCalculatorMode — seed=\(Double(displayString) ?? 0)", category: "glassnumpad")
         calculator = CalculatorEngine(
             initialValue: Double(displayString) ?? 0,
             maxDigitCount: configuration.maxDigitCount
@@ -547,6 +570,7 @@ public struct GlassNumPad<
 
     private func exitCalculatorMode() {
         let result = calculator.currentValue
+        RemoteLogger.shared.info("exitCalculatorMode — result=\(result)", category: "glassnumpad")
         displayString = CalculatorEngine.format(result)
         value = result; isSelectAll = true
         withAnimation(.interactiveSpring(duration: 0.35)) { mode = .numpad }
