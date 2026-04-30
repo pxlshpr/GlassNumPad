@@ -125,30 +125,31 @@ public struct GlassNumPad<
         .frame(maxWidth: .infinity)
         .onAppear {
             // Initial sync — bypass any inherited animation context (e.g. the sheet's
-            // present spring) so the readout snaps to its starting value and the
-            // pad always opens at the standard numpad regardless of where the
-            // user left it last time.
+            // present spring) so the readout snaps to its starting value instead of
+            // sliding via numericText.
             var t = Transaction()
             t.disablesAnimations = true
             withTransaction(t) {
                 displayString = CalculatorEngine.format(value)
                 isSelectAll = true
-                mode = .numpad
-                isCapsuleExpanded = false
             }
-            // Honor configuration.startsInPicker on first appearance only.
+            // Honor configuration.startsInPicker on first appearance — the
+            // capsule expansion drives the mode change via the existing
+            // onChange handler.
             if configuration.startsInPicker, !didApplyInitialMode {
                 didApplyInitialMode = true
                 isCapsuleExpanded = true
             }
         }
         .onChange(of: value) { _, newValue in
-            // External value change (e.g. caller opened the pad on a different item):
-            // resync the display. Also silenced so re-presentation doesn't show a
-            // numericText scrub from the previous value to the new one. Internal
-            // typing produces a `value` that already matches the formatted display,
-            // so this branch is skipped for internal edits and their own animation
-            // (NumberDisplay's contentTransition) still applies.
+            // External value change (e.g. caller opened the pad on a different
+            // item): resync the display AND drop the user back to the standard
+            // numpad, so a re-presentation that left the pad in calculator
+            // mode opens at the numpad with the new value. Silenced so the
+            // readout snaps and the mode swap doesn't slide through. Internal
+            // typing produces a `value` that already matches the formatted
+            // display, so this branch is skipped for internal edits and their
+            // animations (NumberDisplay's contentTransition) still apply.
             let formatted = CalculatorEngine.format(newValue)
             if formatted != displayString {
                 var t = Transaction()
@@ -156,6 +157,8 @@ public struct GlassNumPad<
                 withTransaction(t) {
                     displayString = formatted
                     isSelectAll = true
+                    mode = .numpad
+                    isCapsuleExpanded = false
                 }
             }
         }
