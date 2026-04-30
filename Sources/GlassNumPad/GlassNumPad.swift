@@ -167,6 +167,21 @@ public struct GlassNumPad<
                 mode = expanded ? .picker : .numpad
             }
         }
+        .onDisappear {
+            // value isn't synced from the calculator during in-progress
+            // expressions, so a swipe-dismiss while in calc mode leaves the
+            // binding unchanged — onChange(of: value) won't fire on the next
+            // present, and the stale mode + truncated expression would leak
+            // through. Drop calc mode and clear the engine here so the next
+            // present always lands at a clean numpad with the binding's value.
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) {
+                mode = .numpad
+                isCapsuleExpanded = false
+                calculator = CalculatorEngine()
+            }
+        }
     }
 
     private var currentDisplay: String {
