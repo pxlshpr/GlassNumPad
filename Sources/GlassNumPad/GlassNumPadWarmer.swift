@@ -6,15 +6,16 @@ import SwiftUI
 /// rasterization — the costs that make the first presentation feel laggy while
 /// subsequent ones are smooth.
 ///
-/// Drop this into your root view hierarchy at app start; it renders once at near-zero
-/// opacity, then removes itself after `warmupDuration`.
+/// The view is rendered at full opacity but pushed off-screen via `.offset` —
+/// `.opacity(<≈0)` causes SwiftUI to skip evaluating the foreground subtree's body,
+/// which would defeat the warmup. Off-screen positioning forces the full render path.
 public struct GlassNumPadWarmer: View {
 
     @State private var done = false
 
     private let warmupDuration: TimeInterval
 
-    public init(warmupDuration: TimeInterval = 0.5) {
+    public init(warmupDuration: TimeInterval = 0.6) {
         self.warmupDuration = warmupDuration
         GlassNumPadDebug.event("warmer.init")
     }
@@ -23,8 +24,9 @@ public struct GlassNumPadWarmer: View {
         Group {
             if !done {
                 contents
+                    .frame(width: 400, height: 600)
+                    .offset(x: 10000, y: 10000)
                     .allowsHitTesting(false)
-                    .opacity(0.001)
                     .accessibilityHidden(true)
                     .background {
                         Color.clear.onAppear {
@@ -44,6 +46,7 @@ public struct GlassNumPadWarmer: View {
 
     @ViewBuilder
     private var contents: some View {
+        let _ = GlassNumPadDebug.event("warmer.contents-getter called")
         // Mirror the real sheet structure (see SheetModifier.swift) so the costs that
         // matter actually land during this render: glass-effect Metal pipeline, the
         // prominent action button's gradient, and SF Symbol glyphs for every symbol the
