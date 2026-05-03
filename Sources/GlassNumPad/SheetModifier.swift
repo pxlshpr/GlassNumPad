@@ -218,10 +218,18 @@ private struct GlassNumPadPresentation<
                 }
                 .animation(Self.presentSpring, value: isPresented)
                 .ignoresSafeArea(.container, edges: .bottom)
+                .onChange(of: isPresented) { _, newValue in
+                    GlassNumPadDebug.event("sheetModifier.isPresented → \(newValue)")
+                }
             }
     }
 
     private var sheet: some View {
+        let _ = GlassNumPadDebug.event("sheetModifier.sheet body evaluated")
+        return sheetBody
+    }
+
+    private var sheetBody: some View {
         // Asymmetric drag handling:
         //   - Downward drag (dragOffset > 0): apply via .offset so the whole
         //     sheet (incl. glass) slides off-screen, used for dismissal animation.
@@ -273,6 +281,11 @@ private struct GlassNumPadPresentation<
         .accessibilityAddTraits(.isModal)
         .accessibilityAction(.escape) {
             isPresented = false
+        }
+        .background {
+            Color.clear.onAppear {
+                GlassNumPadDebug.event("sheetModifier.sheet onAppear (first frame on screen)")
+            }
         }
     }
 

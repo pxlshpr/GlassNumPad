@@ -16,6 +16,7 @@ public struct GlassNumPadWarmer: View {
 
     public init(warmupDuration: TimeInterval = 0.5) {
         self.warmupDuration = warmupDuration
+        GlassNumPadDebug.event("warmer.init")
     }
 
     public var body: some View {
@@ -25,8 +26,15 @@ public struct GlassNumPadWarmer: View {
                     .allowsHitTesting(false)
                     .opacity(0.001)
                     .accessibilityHidden(true)
+                    .background {
+                        Color.clear.onAppear {
+                            GlassNumPadDebug.event("warmer.contents-onAppear (first frame rendered)")
+                        }
+                    }
                     .onAppear {
+                        GlassNumPadDebug.event("warmer.onAppear (will hold for \(Int(warmupDuration * 1000))ms)")
                         DispatchQueue.main.asyncAfter(deadline: .now() + warmupDuration) {
+                            GlassNumPadDebug.event("warmer.done (removing from hierarchy)")
                             done = true
                         }
                     }

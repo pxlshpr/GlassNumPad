@@ -78,7 +78,8 @@ public struct GlassNumPad<
     // MARK: - Body
 
     public var body: some View {
-        VStack(spacing: 0) {
+        let _ = GlassNumPadDebug.event("pad.body evaluated")
+        return VStack(spacing: 0) {
             if !(Header.self == EmptyView.self) {
                 // Constrain the header to the digit-grid width so callers can
                 // style a container (e.g. rounded material rect) that visually
@@ -124,6 +125,7 @@ public struct GlassNumPad<
         .padding(.bottom, 10)
         .frame(maxWidth: .infinity)
         .onAppear {
+            GlassNumPadDebug.event("pad.onAppear")
             // Initial sync — bypass any inherited animation context (e.g. the sheet's
             // present spring) so the readout snaps to its starting value instead of
             // sliding via numericText.

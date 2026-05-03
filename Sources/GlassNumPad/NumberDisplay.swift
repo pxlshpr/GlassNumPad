@@ -25,6 +25,7 @@ struct NumberDisplay: View {
             .contentTransition(.numericText())
             .animation(hasAppeared ? .interactiveSpring(duration: 0.3) : .none, value: text)
             .onAppear {
+                GlassNumPadDebug.event("numberDisplay.onAppear")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     hasAppeared = true
                 }
