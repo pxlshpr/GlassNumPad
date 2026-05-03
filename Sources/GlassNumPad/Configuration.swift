@@ -23,6 +23,10 @@ public extension GlassNumPad {
         /// callers whose primary input is a discrete picker (e.g. RPE values
         /// 6–10 in 0.5 steps) skip the digit grid on first appearance.
         public var startsInPicker: Bool
+        /// Extra height added to the auto-computed sheet detent to fit caller-
+        /// supplied header content (the `header:` ViewBuilder slot). Ignored
+        /// when `sheetHeight` is set explicitly.
+        public var additionalContentHeight: CGFloat
 
         public init(
             accentColor: Color = .blue,
@@ -34,7 +38,8 @@ public extension GlassNumPad {
             showCapsule: Bool = true,
             showsCalculator: Bool = true,
             maxDigitCount: Int = 12,
-            startsInPicker: Bool = false
+            startsInPicker: Bool = false,
+            additionalContentHeight: CGFloat = 0
         ) {
             self.accentColor = accentColor
             self.clearColor = clearColor
@@ -46,6 +51,7 @@ public extension GlassNumPad {
             self.showsCalculator = showsCalculator
             self.maxDigitCount = maxDigitCount
             self.startsInPicker = startsInPicker
+            self.additionalContentHeight = additionalContentHeight
         }
 
         /// Button size: capped at 76pt, with minimum 30pt margin per side.
@@ -61,7 +67,7 @@ public extension GlassNumPad {
             let btn = Self.computeButtonSize(spacing: buttonSpacing)
             let headerH = btn + 70
             // top(8) + header + spacing + 4 rows + 3 gaps + bottom(10) + handle+safe(44)
-            return 8 + headerH + 4 * btn + 4 * buttonSpacing + 10 + 44
+            return 8 + headerH + 4 * btn + 4 * buttonSpacing + 10 + 44 + additionalContentHeight
         }
     }
 }

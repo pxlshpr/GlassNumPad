@@ -1,14 +1,10 @@
 import SwiftUI
 
-// MARK: - View modifier for overlay-based presentation
+// MARK: - View modifier for sheet presentation
 
 public extension View {
 
-    /// Presents a ``GlassNumPad`` in a bottom-anchored overlay (with capsule + picker + action + auxiliary + optional header).
-    ///
-    /// Uses a `ZStack` overlay rather than `.sheet` so taps register from the first frame of the
-    /// present animation — `UISheetPresentationController` disables hit testing on the sheet view
-    /// during its slide-up.
+    /// Presents a ``GlassNumPad`` in a detented sheet (with capsule + picker + action + auxiliary + optional header).
     func glassNumPad<C: View, P: View, A: View, Aux: View, H: View>(
         isPresented: Binding<Bool>,
         value: Binding<Double>,
@@ -201,132 +197,36 @@ private struct GlassNumPadPresentation<
     let onAction: () -> Void
     let onAuxiliaryAction: () -> Void
 
-    @State private var dragOffset: CGFloat = 0
-
-    private static var presentSpring: Animation {
-        .spring(response: 0.35, dampingFraction: 0.85)
-    }
-
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .bottom) {
-                ZStack(alignment: .bottom) {
-                    if isPresented {
-                        sheet
-                            .transition(.move(edge: .bottom))
-                    }
-                }
-                .animation(Self.presentSpring, value: isPresented)
-                .ignoresSafeArea(.container, edges: .bottom)
-                .onChange(of: isPresented) { _, newValue in
-                    GlassNumPadDebug.event("sheetModifier.isPresented → \(newValue)")
-                }
+            .sheet(isPresented: $isPresented) {
+                sheetContent
+            }
+            .onChange(of: isPresented) { _, newValue in
+                GlassNumPadDebug.event("sheetModifier.isPresented → \(newValue)")
             }
     }
 
-    private var sheet: some View {
+    private var sheetContent: some View {
         let _ = GlassNumPadDebug.event("sheetModifier.sheet body evaluated")
-        return sheetBody
-    }
-
-    private var sheetBody: some View {
-        // Asymmetric drag handling:
-        //   - Downward drag (dragOffset > 0): apply via .offset so the whole
-        //     sheet (incl. glass) slides off-screen, used for dismissal animation.
-        //   - Upward drag (dragOffset < 0): grow the bottom padding instead of
-        //     applying offset, so the sheet's bottom stays anchored at the screen
-        //     bottom (keeping the home-indicator covered) while the top extends
-        //     upward to give rubber-band feedback.
-        let downwardOffset = max(0, dragOffset)
-        let upwardStretch = max(0, -dragOffset)
-
-        return VStack(spacing: 0) {
-            // Drag indicator (replaces system .presentationDragIndicator)
-            Capsule()
-                .fill(Color.secondary.opacity(0.45))
-                .frame(width: 36, height: 5)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-                .frame(maxWidth: .infinity)
-
-            GlassNumPad(
-                value: $value,
-                configuration: configuration,
-                capsuleLabel: capsuleLabel,
-                pickerContent: pickerContent,
-                actionButton: actionButton,
-                auxiliaryButton: auxiliaryButton,
-                header: header,
-                onAction: onAction,
-                onAuxiliaryAction: onAuxiliaryAction
-            )
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, upwardStretch)
-        .background {
-            // Apple's recommended pattern for backgrounds extending past safe
-            // area: attach .ignoresSafeArea to the shape itself, not the host.
-            // The shape grows to fill its parent (the .background slot), and
-            // ignoresSafeArea on the shape lets it paint past the safe area
-            // into the home-indicator zone. Glass is masked to the same shape;
-            // without `in:` it would default to .capsule (oval).
-            Self.sheetShape
-                .fill(.clear)
-                .glassEffect(.regular, in: Self.sheetShape)
-                .ignoresSafeArea(.container, edges: .bottom)
-        }
-        .contentShape(Self.sheetShape)
-        .offset(y: downwardOffset)
-        .gesture(dragGesture)
-        .accessibilityAddTraits(.isModal)
-        .accessibilityAction(.escape) {
-            isPresented = false
-        }
+        return GlassNumPad(
+            value: $value,
+            configuration: configuration,
+            capsuleLabel: capsuleLabel,
+            pickerContent: pickerContent,
+            actionButton: actionButton,
+            auxiliaryButton: auxiliaryButton,
+            header: header,
+            onAction: onAction,
+            onAuxiliaryAction: onAuxiliaryAction
+        )
+        .presentationDetents([.height(configuration.resolvedSheetHeight)])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(.clear)
         .background {
             Color.clear.onAppear {
                 GlassNumPadDebug.event("sheetModifier.sheet onAppear (first frame on screen)")
             }
         }
-    }
-
-    private static var sheetShape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(
-            topLeadingRadius: 56,
-            bottomLeadingRadius: 0,
-            bottomTrailingRadius: 0,
-            topTrailingRadius: 56,
-            style: .continuous
-        )
-    }
-
-    private var dragGesture: some Gesture {
-        // minimumDistance > 0 lets button taps win when finger movement is small,
-        // and only activates the drag once the user clearly moves the sheet.
-        DragGesture(minimumDistance: 10)
-            .onChanged { value in
-                let translation = value.translation.height
-                if translation >= 0 {
-                    dragOffset = translation
-                } else {
-                    // Upward drag: rubber-band damping (UIKit-style, c=0.55, d=200).
-                    let absT = abs(translation)
-                    let dimension: CGFloat = 200
-                    let coefficient: CGFloat = 0.55
-                    let damped = (coefficient * absT * dimension) / (dimension + coefficient * absT)
-                    dragOffset = -damped
-                }
-            }
-            .onEnded { value in
-                let predictedEnd = value.predictedEndTranslation.height
-                let dragDistance = value.translation.height
-                let shouldDismiss = dragDistance > 100 || predictedEnd > 200
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                    // Reset offset within the same animation so the next presentation
-                    // starts at zero. When dismissing, the slide-off transition compounds
-                    // with offset → 0 to keep the view visually attached to the finger.
-                    dragOffset = 0
-                    if shouldDismiss { isPresented = false }
-                }
-            }
     }
 }
