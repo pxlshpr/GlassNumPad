@@ -1,17 +1,23 @@
 import SwiftUI
 
-/// A near-invisible warmup view that renders a ``GlassNumPad`` instance once during app
-/// launch so the first user-triggered presentation doesn't pay for Metal pipeline
-/// compilation (`.glassEffect`), gradient shader compilation, or SF Symbol glyph
-/// rasterization — the costs that make the first presentation feel laggy while
-/// subsequent ones are smooth.
+/// A warmup view that renders a ``GlassNumPad`` instance once during launch so the first
+/// user-triggered presentation doesn't pay for Metal pipeline compilation
+/// (`.glassEffect`), gradient shader compilation, or SF Symbol glyph rasterization —
+/// the costs that make the first presentation feel laggy while subsequent ones are
+/// smooth.
 ///
-/// The view is rendered at full opacity but pushed off-screen via `.offset` —
-/// `.opacity(<≈0)` causes SwiftUI to skip evaluating the foreground subtree's body,
-/// which would defeat the warmup. Off-screen positioning forces the full render path.
+/// Designed to be attached via `.background { GlassNumPadWarmer() }` on a host view
+/// that has an opaque foreground (so the warmup keypad is hidden visually but still
+/// rendered through the full Metal pipeline). Off-screen positioning was tried first
+/// but iOS's tile-based deferred renderer culled the tiles before the pipeline state
+/// got compiled, defeating the warmup. On-screen-but-covered is what reliably works.
+///
+/// After `warmupDuration` the contents swap to `Color.clear` so the warmup view stops
+/// costing CPU/GPU time. The struct itself stays in the parent's layout (size doesn't
+/// change) so the parent isn't invalidated by the swap.
 public struct GlassNumPadWarmer: View {
 
-    @State private var done = false
+    @State private var warmedUp = false
 
     private let warmupDuration: TimeInterval
 
@@ -22,22 +28,22 @@ public struct GlassNumPadWarmer: View {
 
     public var body: some View {
         Group {
-            if !done {
+            if warmedUp {
+                Color.clear
+            } else {
                 contents
-                    .frame(width: 400, height: 600)
-                    .offset(x: 10000, y: 10000)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
-                    .background {
-                        Color.clear.onAppear {
-                            GlassNumPadDebug.event("warmer.contents-onAppear (first frame rendered)")
-                        }
-                    }
                     .onAppear {
                         GlassNumPadDebug.event("warmer.onAppear (will hold for \(Int(warmupDuration * 1000))ms)")
                         DispatchQueue.main.asyncAfter(deadline: .now() + warmupDuration) {
-                            GlassNumPadDebug.event("warmer.done (removing from hierarchy)")
-                            done = true
+                            GlassNumPadDebug.event("warmer.done (swapping to Color.clear)")
+                            warmedUp = true
+                        }
+                    }
+                    .background {
+                        Color.clear.onAppear {
+                            GlassNumPadDebug.event("warmer.contents-onAppear (first frame rendered)")
                         }
                     }
             }
