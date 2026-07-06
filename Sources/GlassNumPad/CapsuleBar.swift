@@ -6,12 +6,15 @@ struct CapsuleBar<Label: View>: View {
 
     @Binding var isExpanded: Bool
     let accentColor: Color
+    /// When false, there's only one possible unit: no chevron, dimmed, no tap.
+    var isSelectable: Bool = true
     @ViewBuilder let label: () -> Label
 
     private var fg: Color { colorScheme == .dark ? .white : Color(.label) }
 
     var body: some View {
         Button {
+            guard isSelectable else { return }
             Haptic.medium()
             withAnimation(.interactiveSpring(duration: 0.35)) {
                 isExpanded.toggle()
@@ -19,10 +22,14 @@ struct CapsuleBar<Label: View>: View {
         } label: {
             HStack(spacing: 8) {
                 label()
-                    .foregroundStyle(isExpanded ? accentColor : fg.opacity(0.7))
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(isExpanded ? accentColor : fg.opacity(0.4))
+                    .foregroundStyle(isExpanded
+                        ? accentColor
+                        : fg.opacity(isSelectable ? 0.7 : 0.35))
+                if isSelectable {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(isExpanded ? accentColor : fg.opacity(0.4))
+                }
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
@@ -38,8 +45,10 @@ struct CapsuleBar<Label: View>: View {
                         Capsule(style: .continuous)
                             .strokeBorder(border, lineWidth: 1)
                     )
+                    .opacity(isSelectable ? 1 : 0.6)
             }
         }
         .buttonStyle(.plain)
+        .disabled(!isSelectable)
     }
 }

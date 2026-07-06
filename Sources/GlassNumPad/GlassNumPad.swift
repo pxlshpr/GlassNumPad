@@ -204,6 +204,7 @@ public struct GlassNumPad<
                 CapsuleBar(
                     isExpanded: $isCapsuleExpanded,
                     accentColor: configuration.accentColor,
+                    isSelectable: configuration.unitSelectable,
                     label: { capsuleLabel }
                 )
             }

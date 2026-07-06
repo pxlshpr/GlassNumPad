@@ -27,6 +27,10 @@ public extension GlassNumPad {
         /// supplied header content (the `header:` ViewBuilder slot). Ignored
         /// when `sheetHeight` is set explicitly.
         public var additionalContentHeight: CGFloat
+        /// Whether the capsule's unit is user-selectable. When false (there's
+        /// only one possible unit), the capsule drops its chevron, dims, and
+        /// stops responding to taps so it's clear there's no choice to make.
+        public var unitSelectable: Bool
 
         public init(
             accentColor: Color = .blue,
@@ -39,7 +43,8 @@ public extension GlassNumPad {
             showsCalculator: Bool = true,
             maxDigitCount: Int = 12,
             startsInPicker: Bool = false,
-            additionalContentHeight: CGFloat = 0
+            additionalContentHeight: CGFloat = 0,
+            unitSelectable: Bool = true
         ) {
             self.accentColor = accentColor
             self.clearColor = clearColor
@@ -52,6 +57,7 @@ public extension GlassNumPad {
             self.maxDigitCount = maxDigitCount
             self.startsInPicker = startsInPicker
             self.additionalContentHeight = additionalContentHeight
+            self.unitSelectable = unitSelectable
         }
 
         /// Button size: capped at 76pt, with minimum 30pt margin per side.
