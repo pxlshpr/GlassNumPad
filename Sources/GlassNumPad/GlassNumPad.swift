@@ -51,6 +51,14 @@ public struct GlassNumPad<
 
     private var isCalc: Bool { mode == .calculator }
 
+    /// Whether the capsule's unit can actually be changed. A caller that supplies no
+    /// `pickerContent` has exactly one unit, so expanding the capsule would only reveal an
+    /// empty picker — derive that structurally rather than making every such caller remember
+    /// to pass `unitSelectable: false`. An explicit `unitSelectable: false` still wins.
+    private var isUnitSelectable: Bool {
+        configuration.unitSelectable && !(PickerContent.self == EmptyView.self)
+    }
+
     // MARK: - Init
 
     public init(
@@ -138,7 +146,9 @@ public struct GlassNumPad<
             // Honor configuration.startsInPicker on first appearance — the
             // capsule expansion drives the mode change via the existing
             // onChange handler.
-            if configuration.startsInPicker, !didApplyInitialMode {
+            // Skipped when the unit isn't selectable — opening picker mode with no
+            // pickerContent would present an empty scroll view with no way back.
+            if configuration.startsInPicker, isUnitSelectable, !didApplyInitialMode {
                 didApplyInitialMode = true
                 isCapsuleExpanded = true
             }
@@ -204,7 +214,7 @@ public struct GlassNumPad<
                 CapsuleBar(
                     isExpanded: $isCapsuleExpanded,
                     accentColor: configuration.accentColor,
-                    isSelectable: configuration.unitSelectable,
+                    isSelectable: isUnitSelectable,
                     label: { capsuleLabel }
                 )
             }
