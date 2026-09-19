@@ -42,7 +42,10 @@ public struct GlassNumPad<
     // MARK: - Sizes
 
     private var buttonSize: CGFloat {
-        Configuration.computeButtonSize(spacing: configuration.buttonSpacing)
+        Configuration.computeButtonSize(
+            spacing: configuration.buttonSpacing,
+            additionalContentHeight: configuration.additionalContentHeight
+        )
     }
     private var gridWidth: CGFloat {
         buttonSize * 4 + configuration.buttonSpacing * 3
@@ -357,18 +360,23 @@ public struct GlassNumPad<
         let sz = buttonSize
         let cr = configuration.buttonCornerRadius
 
-        // Whether the slot between `0` and the action button is occupied.
-        // - showsCalculator → +/− toggle (or # in calc mode)
-        // - !showsCalculator + non-empty AuxiliaryContent → caller-provided button
+        // Whether the slot(s) between `0` and the action button are occupied.
+        // - showsCalculator → +/− toggle (or = in calc mode)
+        // - non-empty AuxiliaryContent (and not switched off) → caller-provided button;
+        //   with the calculator ALSO on, both render and `0` narrows to a single cell
+        //   (the aux button occupies the cell the period takes over in calc mode)
         // - Neither → slot collapses; `0` widens to fill it
-        let hasAux = !(AuxiliaryContent.self == EmptyView.self)
+        let hasAux = !(AuxiliaryContent.self == EmptyView.self) && configuration.showsAuxiliaryButton
         let showsAuxSlot = configuration.showsCalculator || hasAux
 
         // 0 button width:
         // - calc mode: single (period appears in the slot to its right)
-        // - shows aux slot: double-wide
-        // - no aux slot: triple-wide (fills the missing slot)
-        let zeroWidth: CGFloat = isCalc ? sz : (showsAuxSlot ? sz * 2 + s : sz * 3 + s * 2)
+        // - calculator AND aux button: single (both slots are occupied)
+        // - one of calculator / aux button: double-wide
+        // - neither: triple-wide (fills the missing slot)
+        let zeroWidth: CGFloat = (isCalc || (configuration.showsCalculator && hasAux))
+            ? sz
+            : (showsAuxSlot ? sz * 2 + s : sz * 3 + s * 2)
 
         return HStack(spacing: s) {
             // ── 0 button: width animates between single, double, triple ──
@@ -391,8 +399,23 @@ public struct GlassNumPad<
                     ))
             }
 
-            // ── Aux slot: +/− (calc on), # (in calc mode), or caller-provided button ──
+            // ── Aux slot(s): caller-provided button (numpad mode only — its cell is the
+            //    period's in calc mode), then the +/− toggle (= in calc mode) ──
             if showsAuxSlot {
+                if hasAux, !isCalc {
+                    Button {
+                        onAuxiliaryAction()
+                    } label: {
+                        auxiliaryContent
+                            .frame(width: sz, height: sz)
+                            .background(standardBg(cr))
+                    }
+                    .buttonStyle(NumPadPressStyle())
+                    .transition(.asymmetric(
+                        insertion: .push(from: .leading),
+                        removal: .push(from: .trailing)
+                    ))
+                }
                 if configuration.showsCalculator {
                     Button {
                         if isCalc { exitCalculatorMode() } else { enterCalculatorMode() }
@@ -408,15 +431,6 @@ public struct GlassNumPad<
                         .foregroundStyle(fg)
                         .frame(width: sz, height: sz)
                         .background(standardBg(cr))
-                    }
-                    .buttonStyle(NumPadPressStyle())
-                } else {
-                    Button {
-                        onAuxiliaryAction()
-                    } label: {
-                        auxiliaryContent
-                            .frame(width: sz, height: sz)
-                            .background(standardBg(cr))
                     }
                     .buttonStyle(NumPadPressStyle())
                 }
