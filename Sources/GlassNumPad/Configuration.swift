@@ -162,6 +162,15 @@ public extension GlassNumPad {
         /// `glassNumPadAvailableHeight`: five key heights of the sheet's size fit it, so the
         /// keys come out the sheet's. NutriKit's iPhone Duo fold morph (#3245) springs the
         /// pad's height to it, which is the whole of what the keys do.
+        /// The width of the pad's key grid in its own sheet on a window this size — which is
+        /// also the width the sheet frames the caller's `header:` content to, so a caller
+        /// morphing its own layout onto the sheet's lands both on one column (#3245).
+        public func sheetGridWidth(inWindowSize size: CGSize) -> CGFloat {
+            4 * Self.sheetButtonSize(spacing: buttonSpacing,
+                                     additionalContentHeight: additionalContentHeight,
+                                     windowSize: size) + 3 * buttonSpacing
+        }
+
         public func sheetPadHeight(inWindowSize size: CGSize) -> CGFloat {
             Self.padFixedHeight(spacing: buttonSpacing)
                 + 5 * Self.sheetButtonSize(spacing: buttonSpacing,
