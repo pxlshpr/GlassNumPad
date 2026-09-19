@@ -79,28 +79,54 @@ public extension GlassNumPad {
         ///
         /// `availableWidth` (the `glassNumPadAvailableWidth` environment) is the width a pad
         /// embedded in a caller's layout has: the keys then fit that less the pad's own 20 pt
-        /// readout padding per side, and the window's height cap is left alone.
-        static func computeButtonSize(spacing: CGFloat, additionalContentHeight: CGFloat = 0, availableWidth: CGFloat? = nil) -> CGFloat {
+        /// readout padding per side. `availableHeight` (`glassNumPadAvailableHeight`) is the
+        /// height that pad was given, and the same five key heights are fitted into it —
+        /// with none of the sheet's chrome, since an embedded pad has none. Given neither,
+        /// the window is the measure, as it is for the pad in its own sheet.
+        static func computeButtonSize(spacing: CGFloat, additionalContentHeight: CGFloat = 0,
+                                      availableWidth: CGFloat? = nil, availableHeight: CGFloat? = nil) -> CGFloat {
             let bounds = windowBounds
-            let maxSize: CGFloat = 76
-            let minMargin: CGFloat = 30
             let byWidth: CGFloat
             if let availableWidth {
                 byWidth = floor((availableWidth - 2 * 20 - 3 * spacing) / 4)
             } else {
                 byWidth = floor((bounds.width - 2 * minMargin - 3 * spacing) / 4)
             }
-            let fixed = 8 + 70 + 4 * spacing + 10 + 44 + additionalContentHeight + sheetTopRoom
-            let byHeight = floor((bounds.height - fixed) / 5)
+            guard let availableHeight else {
+                return sheetButtonSize(spacing: spacing, additionalContentHeight: additionalContentHeight,
+                                       windowSize: bounds.size, byWidth: byWidth)
+            }
+            let byHeight = floor((availableHeight - padFixedHeight(spacing: spacing)) / 5)
             return max(minSize, min(maxSize, byWidth, byHeight))
         }
 
+        /// The key size the pad's own SHEET uses on a window this size — the cap that put the
+        /// iPhone Duo's cover display (466 × 678) at 62 pt under a 175 pt food header.
+        static func sheetButtonSize(spacing: CGFloat, additionalContentHeight: CGFloat,
+                                    windowSize: CGSize, byWidth: CGFloat? = nil) -> CGFloat {
+            let width = byWidth ?? floor((windowSize.width - 2 * minMargin - 3 * spacing) / 4)
+            let fixed = padFixedHeight(spacing: spacing) + sheetChromeHeight + additionalContentHeight + sheetTopRoom
+            let byHeight = floor((windowSize.height - fixed) / 5)
+            return max(minSize, min(maxSize, width, byHeight))
+        }
+
+        /// What the pad's own column costs beside its five key heights: its top padding, the
+        /// 70 pt the readout zone stands above the key it is built on, the four gaps and the
+        /// bottom padding — `GlassNumPad.body`'s own arithmetic, with none of the sheet's.
+        static func padFixedHeight(spacing: CGFloat) -> CGFloat { 8 + 70 + 4 * spacing + 10 }
+
+        /// A key is never bigger than this, whatever the window.
+        static var maxSize: CGFloat { 76 }
         /// A key never shrinks below this, whatever the window: past it the sheet clips
         /// rather than the keys becoming untappable.
         static var minSize: CGFloat { 52 }
+        /// The least a sheet leaves at each side of the key grid.
+        static var minMargin: CGFloat { 30 }
         /// What a sheet leaves above itself at its tallest: the top safe area is the
         /// caller's window's, and a `.height` detent stops short of the top by about this.
         static var sheetTopRoom: CGFloat { 20 }
+        /// What the sheet wears around the pad: the grabber's band and the bottom safe area.
+        static var sheetChromeHeight: CGFloat { 44 }
 
         /// Read on the main thread only — from view bodies and the sheet's detent — hence the
         /// assumption rather than an annotation (the callers are not actor-annotated).
@@ -118,11 +144,35 @@ public extension GlassNumPad {
         }
 
         public var resolvedSheetHeight: CGFloat {
+            resolvedSheetHeight(inWindowSize: Self.windowBounds.size)
+        }
+
+        /// The sheet's height on a window the caller names rather than the key one — for a
+        /// caller whose window has already changed under it (the iPhone Duo's fold, #3245).
+        public func resolvedSheetHeight(inWindowSize size: CGSize) -> CGFloat {
             if sheetHeight > 0 { return sheetHeight }
-            let btn = Self.computeButtonSize(spacing: buttonSpacing, additionalContentHeight: additionalContentHeight)
-            let headerH = btn + 70
-            // top(8) + header + spacing + 4 rows + 3 gaps + bottom(10) + handle+safe(44)
-            return 8 + headerH + 4 * btn + 4 * buttonSpacing + 10 + 44 + additionalContentHeight
+            // the pad's own column + handle/safe(44) + the caller's header
+            return sheetPadHeight(inWindowSize: size) + Self.sheetChromeHeight + additionalContentHeight
+        }
+
+        /// The height the pad ITSELF takes in its own sheet on a window this size — the
+        /// detent less the caller's header and the grabber/safe-area band. A caller that
+        /// draws the pad inside its own layout and has to hand over to (or come out of) that
+        /// sheet without the keys jumping gives the pad exactly this, through
+        /// `glassNumPadAvailableHeight`: five key heights of the sheet's size fit it, so the
+        /// keys come out the sheet's. NutriKit's iPhone Duo fold morph (#3245) springs the
+        /// pad's height to it, which is the whole of what the keys do.
+        public func sheetPadHeight(inWindowSize size: CGSize) -> CGFloat {
+            Self.padFixedHeight(spacing: buttonSpacing)
+                + 5 * Self.sheetButtonSize(spacing: buttonSpacing,
+                                           additionalContentHeight: additionalContentHeight,
+                                           windowSize: size)
         }
     }
 }
+
+/// The pad's configuration without the pad's five view generics, which it uses none of: for a
+/// caller that has to ask the configuration something — how tall the pad's own sheet is, and
+/// the pad inside it — without spelling those types out (#3245).
+public typealias GlassNumPadConfiguration =
+    GlassNumPad<EmptyView, EmptyView, EmptyView, EmptyView, EmptyView>.Configuration

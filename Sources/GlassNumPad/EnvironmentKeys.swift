@@ -24,3 +24,20 @@ public extension EnvironmentValues {
         set { self[GlassNumPadAvailableWidthKey.self] = newValue }
     }
 }
+
+/// The height a pad embedded in a caller's own layout has for itself — the column it was
+/// given, with nothing else in it. The keys then fit five heights into that, exactly as they
+/// fit five into a window when the pad is in its own sheet, so a caller that hands the pad
+/// over to (or takes it out of) that sheet can land on the sheet's key size by giving it the
+/// sheet's own pad height (`Configuration.sheetPadHeight(inWindowSize:)`) — NutriKit's iPhone
+/// Duo fold morph, #3245. nil keeps the window-based cap.
+struct GlassNumPadAvailableHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat? = nil
+}
+
+public extension EnvironmentValues {
+    var glassNumPadAvailableHeight: CGFloat? {
+        get { self[GlassNumPadAvailableHeightKey.self] }
+        set { self[GlassNumPadAvailableHeightKey.self] = newValue }
+    }
+}

@@ -42,12 +42,14 @@ public struct GlassNumPad<
     // MARK: - Sizes
 
     @Environment(\.glassNumPadAvailableWidth) private var availableWidth
+    @Environment(\.glassNumPadAvailableHeight) private var availableHeight
 
     private var buttonSize: CGFloat {
         Configuration.computeButtonSize(
             spacing: configuration.buttonSpacing,
             additionalContentHeight: configuration.additionalContentHeight,
-            availableWidth: availableWidth
+            availableWidth: availableWidth,
+            availableHeight: availableHeight
         )
     }
     private var gridWidth: CGFloat {
