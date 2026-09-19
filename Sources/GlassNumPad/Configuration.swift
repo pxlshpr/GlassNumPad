@@ -76,11 +76,20 @@ public extension GlassNumPad {
         /// for 76 pt keys under a 175 pt food header and cut the top off; so did the iPhone SE.
         /// Measured against the key window (`UIScreen.main.bounds` is stale on a foldable —
         /// it kept the cover display's size after the unfold), falling back to the screen.
-        static func computeButtonSize(spacing: CGFloat, additionalContentHeight: CGFloat = 0) -> CGFloat {
+        ///
+        /// `availableWidth` (the `glassNumPadAvailableWidth` environment) is the width a pad
+        /// embedded in a caller's layout has: the keys then fit that less the pad's own 20 pt
+        /// readout padding per side, and the window's height cap is left alone.
+        static func computeButtonSize(spacing: CGFloat, additionalContentHeight: CGFloat = 0, availableWidth: CGFloat? = nil) -> CGFloat {
             let bounds = windowBounds
             let maxSize: CGFloat = 76
             let minMargin: CGFloat = 30
-            let byWidth = floor((bounds.width - 2 * minMargin - 3 * spacing) / 4)
+            let byWidth: CGFloat
+            if let availableWidth {
+                byWidth = floor((availableWidth - 2 * 20 - 3 * spacing) / 4)
+            } else {
+                byWidth = floor((bounds.width - 2 * minMargin - 3 * spacing) / 4)
+            }
             let fixed = 8 + 70 + 4 * spacing + 10 + 44 + additionalContentHeight + sheetTopRoom
             let byHeight = floor((bounds.height - fixed) / 5)
             return max(minSize, min(maxSize, byWidth, byHeight))
