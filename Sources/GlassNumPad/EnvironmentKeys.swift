@@ -41,3 +41,21 @@ public extension EnvironmentValues {
         set { self[GlassNumPadAvailableHeightKey.self] = newValue }
     }
 }
+
+/// #3276 — whether the pad lays its readout and its keys out SIDE BY SIDE rather than stacked:
+/// the caller's header, the number and the unit capsule in a leading column, the keys in a
+/// trailing one. Set by the pad's own sheet (`glassNumPad(...)`) on an iPhone turned sideways,
+/// where the window is ~400 pt tall and the stacked pad wants 388 at its smallest keys before
+/// the caller's header — it was clipped top and bottom there. A pad a caller embeds in its own
+/// layout keeps the stacked form (NutriKit's iPhone Duo panel lays the pad beside the food
+/// header itself, and scales it to the half it has).
+struct GlassNumPadSideBySideKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var glassNumPadSideBySide: Bool {
+        get { self[GlassNumPadSideBySideKey.self] }
+        set { self[GlassNumPadSideBySideKey.self] = newValue }
+    }
+}

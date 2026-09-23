@@ -123,6 +123,22 @@ public extension GlassNumPad {
         /// bottom padding — `GlassNumPad.body`'s own arithmetic, with none of the sheet's.
         static func padFixedHeight(spacing: CGFloat) -> CGFloat { 8 + 70 + 4 * spacing + 10 }
 
+        /// #3276 — the key size the pad's own sheet uses on an iPhone turned sideways, where the
+        /// readout and the keys stand side by side (`glassNumPadSideBySide`): FOUR key heights in
+        /// the height it has (three digit rows and the bottom row — the readout is beside them,
+        /// not above), the pad's own top and bottom padding and three gaps taken off; and a grid
+        /// in each half of the width, the two halves `wideGap` apart inside `minMargin` a side.
+        /// `size` is the sheet's content box once measured, the window until then.
+        static func wideButtonSize(spacing: CGFloat, size: CGSize) -> CGFloat {
+            let byHeight = floor((size.height - 8 - 10 - 3 * spacing) / 4)
+            let half = (size.width - 2 * minMargin - wideGap) / 2
+            let byWidth = floor((half - 3 * spacing) / 4)
+            return max(minSize, min(maxSize, byWidth, byHeight))
+        }
+
+        /// #3276 — between the two columns of the side-by-side layout.
+        static var wideGap: CGFloat { 24 }
+
         /// A key is never bigger than this, whatever the window.
         static var maxSize: CGFloat { 76 }
         /// A key never shrinks below this, whatever the window: past it the sheet clips

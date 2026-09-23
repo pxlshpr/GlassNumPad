@@ -200,15 +200,54 @@ private struct GlassNumPadPresentation<
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: $isPresented) {
-                sheetContent
+                GlassNumPadSheetContent(
+                    value: $value,
+                    configuration: configuration,
+                    capsuleLabel: capsuleLabel,
+                    pickerContent: pickerContent,
+                    actionButton: actionButton,
+                    auxiliaryButton: auxiliaryButton,
+                    header: header,
+                    onAction: onAction,
+                    onAuxiliaryAction: onAuxiliaryAction
+                )
             }
             .onChange(of: isPresented) { _, newValue in
                 GlassNumPadDebug.event("sheetModifier.isPresented → \(newValue)")
             }
     }
+}
 
-    private var sheetContent: some View {
+/// The sheet's content: the pad, at its detent, on a clear background. A view of its own so it
+/// can read the SHEET's size class (#3276): on an iPhone turned sideways — compact height — the
+/// pad lays its readout and keys out side by side (`glassNumPadSideBySide`) and the sheet is
+/// attached to the bottom edge, where UIKit otherwise drops a compact-height sheet's detents and
+/// stands it edge to edge over the whole screen with no grabber and no corners. Attached, it is
+/// a rounded sheet with its grabber, still the screen's full height, which the side-by-side pad
+/// fits (`EdgeAttachedInCompactHeight` — SwiftUI has no modifier for it).
+private struct GlassNumPadSheetContent<
+    CapsuleLabel: View,
+    PickerContent: View,
+    ActionContent: View,
+    AuxiliaryContent: View,
+    Header: View
+>: View {
+
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    @Binding var value: Double
+    let configuration: GlassNumPad<CapsuleLabel, PickerContent, ActionContent, AuxiliaryContent, Header>.Configuration
+    let capsuleLabel: () -> CapsuleLabel
+    let pickerContent: () -> PickerContent
+    let actionButton: () -> ActionContent
+    let auxiliaryButton: () -> AuxiliaryContent
+    let header: () -> Header
+    let onAction: () -> Void
+    let onAuxiliaryAction: () -> Void
+
+    var body: some View {
         let _ = GlassNumPadDebug.event("sheetModifier.sheet body evaluated")
+        let sideBySide = verticalSizeClass == .compact
         return GlassNumPad(
             value: $value,
             configuration: configuration,
@@ -220,6 +259,7 @@ private struct GlassNumPadPresentation<
             onAction: onAction,
             onAuxiliaryAction: onAuxiliaryAction
         )
+        .environment(\.glassNumPadSideBySide, sideBySide)
         .presentationDetents([.height(configuration.resolvedSheetHeight)])
         .presentationDragIndicator(.visible)
         .presentationBackground(.clear)
@@ -227,6 +267,38 @@ private struct GlassNumPadPresentation<
             Color.clear.onAppear {
                 GlassNumPadDebug.event("sheetModifier.sheet onAppear (first frame on screen)")
             }
+        }
+        .background { EdgeAttachedInCompactHeight().frame(width: 0, height: 0) }
+    }
+}
+
+/// #3276 — keeps the pad's sheet a sheet on an iPhone turned sideways (the pattern NutriKit's
+/// `DiaryPanelSheet` settled in #3275). In compact height UIKit otherwise presents it over the
+/// whole screen, edge to edge, with no grabber and no corners — nothing that says it pulls
+/// down. Attached to the bottom edge it stands as a rounded sheet with its grabber, the
+/// screen's full height. The sheet's controller is reached from inside the presentation: it is
+/// the top of this controller's parent chain.
+private struct EdgeAttachedInCompactHeight: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> Controller { Controller() }
+    func updateUIViewController(_ controller: Controller, context: Context) {}
+
+    final class Controller: UIViewController {
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            attach()
+        }
+
+        override func didMove(toParent parent: UIViewController?) {
+            super.didMove(toParent: parent)
+            attach()
+        }
+
+        private func attach() {
+            var top: UIViewController = self
+            while let parent = top.parent { top = parent }
+            guard let sheet = top.sheetPresentationController,
+                  !sheet.prefersEdgeAttachedInCompactHeight else { return }
+            sheet.prefersEdgeAttachedInCompactHeight = true
         }
     }
 }

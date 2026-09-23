@@ -47,9 +47,18 @@ public struct GlassNumPad<
 
     @Environment(\.glassNumPadAvailableWidth) private var availableWidth
     @Environment(\.glassNumPadAvailableHeight) private var availableHeight
+    /// #3276 — the readout beside the keys rather than above them: the pad's own sheet on an
+    /// iPhone turned sideways (`wideLayout`).
+    @Environment(\.glassNumPadSideBySide) private var sideBySide
+    /// #3276 — the box the side-by-side layout was given, measured; the window until then.
+    @State private var wideSize: CGSize = .zero
 
     private var buttonSize: CGFloat {
-        Configuration.computeButtonSize(
+        if sideBySide {
+            let size = wideSize == .zero ? Configuration.windowBounds.size : wideSize
+            return Configuration.wideButtonSize(spacing: configuration.buttonSpacing, size: size)
+        }
+        return Configuration.computeButtonSize(
             spacing: configuration.buttonSpacing,
             additionalContentHeight: configuration.additionalContentHeight,
             availableWidth: availableWidth,
@@ -99,51 +108,13 @@ public struct GlassNumPad<
 
     public var body: some View {
         let _ = GlassNumPadDebug.event("pad.body evaluated")
-        return VStack(spacing: 0) {
-            if !(Header.self == EmptyView.self) {
-                // Constrain the header to the digit-grid width so callers can
-                // style a container (e.g. rounded material rect) that visually
-                // aligns with the keypad button columns.
-                header
-                    .frame(width: gridWidth)
-                    .padding(.bottom, 8)
-            }
-
-            headerZone
-                .frame(height: headerHeight)
-                .clipped()
-                .padding(.horizontal, 20)
-
-            Spacer().frame(height: configuration.buttonSpacing)
-
-            if mode == .picker {
-                ScrollView {
-                    pickerContent
-                        .environment(\.dismissGlassNumPadPicker, {
-                            withAnimation(.interactiveSpring(duration: 0.35)) {
-                                isCapsuleExpanded = false
-                            }
-                        })
-                        .padding(.top, 4)
-                        .padding(.horizontal, 20)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .frame(height: buttonSize * 4 + configuration.buttonSpacing * 3)
-                .transition(.asymmetric(
-                    insertion: .move(edge: .bottom).combined(with: .opacity),
-                    removal: .move(edge: .bottom).combined(with: .opacity)
-                ))
+        return Group {
+            if sideBySide {
+                wideLayout
             } else {
-                digitAndBottomRows
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .bottom).combined(with: .opacity),
-                        removal: .move(edge: .bottom).combined(with: .opacity)
-                    ))
+                stackedLayout
             }
         }
-        .padding(.top, 8)
-        .padding(.bottom, 10)
-        .frame(maxWidth: .infinity)
         .onAppear {
             GlassNumPadDebug.event("pad.onAppear")
             // Initial sync — bypass any inherited animation context (e.g. the sheet's
@@ -211,6 +182,141 @@ public struct GlassNumPad<
                 calculator = CalculatorEngine()
             }
         }
+    }
+
+    /// The pad as it has always stood: the caller's header, the readout zone, then the keys,
+    /// one column.
+    private var stackedLayout: some View {
+        VStack(spacing: 0) {
+            if !(Header.self == EmptyView.self) {
+                // Constrain the header to the digit-grid width so callers can
+                // style a container (e.g. rounded material rect) that visually
+                // aligns with the keypad button columns.
+                header
+                    .frame(width: gridWidth)
+                    .padding(.bottom, 8)
+            }
+
+            headerZone
+                .frame(height: headerHeight)
+                .clipped()
+                .padding(.horizontal, 20)
+
+            Spacer().frame(height: configuration.buttonSpacing)
+
+            if mode == .picker {
+                ScrollView {
+                    pickerContent
+                        .environment(\.dismissGlassNumPadPicker, {
+                            withAnimation(.interactiveSpring(duration: 0.35)) {
+                                isCapsuleExpanded = false
+                            }
+                        })
+                        .padding(.top, 4)
+                        .padding(.horizontal, 20)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(height: buttonSize * 4 + configuration.buttonSpacing * 3)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                    removal: .move(edge: .bottom).combined(with: .opacity)
+                ))
+            } else {
+                digitAndBottomRows
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    ))
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Side by side (#3276)
+
+    /// The pad on an iPhone turned sideways, in its own sheet (`glassNumPadSideBySide`): the
+    /// window is ~400 pt tall, and the stacked pad wanted 388 at its smallest keys before the
+    /// caller's header — it stood clipped top and bottom. Two columns of the key grid's width
+    /// instead, centred: the caller's header, the number and the unit capsule (or the
+    /// calculator's operator row) leading; the keys (or the unit picker) trailing. The leading
+    /// column is exactly as tall as the key grid, the header at its top and the readout centred
+    /// in the rest, so the two columns read as one block. The keys are sized to the box
+    /// (`Configuration.wideButtonSize`): four rows in its height, a grid in each half of its
+    /// width — 76 on a Pro, ~70 on a mini.
+    private var wideLayout: some View {
+        GeometryReader { proxy in
+            let s = configuration.buttonSpacing
+            let sz = buttonSize
+            let grid = sz * 4 + s * 3
+            HStack(alignment: .bottom, spacing: Configuration.wideGap) {
+                VStack(spacing: 0) {
+                    if !(Header.self == EmptyView.self) {
+                        header
+                            .frame(width: grid)
+                            .padding(.bottom, 8)
+                    }
+                    wideReadout
+                        .frame(maxHeight: .infinity)
+                        .clipped()
+                }
+                .frame(width: grid, height: grid)
+
+                Group {
+                    if mode == .picker {
+                        ScrollView {
+                            pickerContent
+                                .environment(\.dismissGlassNumPadPicker, {
+                                    withAnimation(.interactiveSpring(duration: 0.35)) {
+                                        isCapsuleExpanded = false
+                                    }
+                                })
+                                .padding(.top, 4)
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .bottom).combined(with: .opacity)
+                        ))
+                    } else {
+                        digitAndBottomRows
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .move(edge: .bottom).combined(with: .opacity)
+                            ))
+                    }
+                }
+                .frame(width: grid, height: grid)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+                guard size.width > 0, size.height > 0 else { return }
+                wideSize = size
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+    }
+
+    /// The readout for the side-by-side layout: the number at its natural height over the
+    /// capsule (or the operator row), centred in what the leading column has under the header —
+    /// not stretched to fill it, as `headerZone` stretches into its fixed band.
+    private var wideReadout: some View {
+        VStack(spacing: 10) {
+            NumberDisplay(text: currentDisplay, isCalculatorMode: isCalc)
+            if isCalc {
+                operatorRow.frame(height: buttonSize)
+            } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
+                CapsuleBar(
+                    isExpanded: $isCapsuleExpanded,
+                    accentColor: configuration.accentColor,
+                    isSelectable: isUnitSelectable,
+                    label: { capsuleLabel }
+                )
+            }
+        }
+        .animation(.interactiveSpring(duration: 0.35), value: mode)
     }
 
     private var currentDisplay: String {
