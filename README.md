@@ -114,6 +114,15 @@ Full four-function calculator. An extra operator row appears at the top, operato
 ### Picker (tap capsule)
 The capsule expands and the numpad is replaced with your custom picker content (e.g., a unit grid). Tap the capsule again to collapse back to the numpad.
 
+## Sideways (compact height)
+
+On an iPhone turned sideways the sheet lays the pad out side by side instead of stacked: the
+caller's `header`, the number and the unit capsule (or the calculator's operator row) in a
+leading column, the keys (or the unit picker) in a trailing one, both the key grid's width and
+centred. The keys are sized to four rows of the sheet's height, and the sheet is attached to the
+bottom edge so it keeps its corners and grabber. Only the sheet presentation does this; a
+`GlassNumPad` embedded in your own layout keeps the stacked form.
+
 ## License
 
 [WTFPL](http://www.wtfpl.net/)
