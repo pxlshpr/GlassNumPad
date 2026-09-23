@@ -37,6 +37,12 @@ public extension GlassNumPad {
         /// existing entry) can't vary per presentation — this flag can. Ignored
         /// when there is no auxiliary content to show.
         public var showsAuxiliaryButton: Bool
+        /// A `/` key at the far left of the bottom row, so a fraction can be typed as one
+        /// ("1/4" → 0.25): `0` gives up one cell for it. Numpad mode only — the calculator has
+        /// its own ÷, and the key slides out as the calculator's `.` slides in. Needs a cell to
+        /// stand in, so it is ignored when the calculator toggle AND an auxiliary button both
+        /// already share the row with `0`.
+        public var showsFractionKey: Bool
 
         public init(
             accentColor: Color = .blue,
@@ -51,7 +57,8 @@ public extension GlassNumPad {
             startsInPicker: Bool = false,
             additionalContentHeight: CGFloat = 0,
             unitSelectable: Bool = true,
-            showsAuxiliaryButton: Bool = true
+            showsAuxiliaryButton: Bool = true,
+            showsFractionKey: Bool = false
         ) {
             self.accentColor = accentColor
             self.clearColor = clearColor
@@ -66,6 +73,7 @@ public extension GlassNumPad {
             self.additionalContentHeight = additionalContentHeight
             self.unitSelectable = unitSelectable
             self.showsAuxiliaryButton = showsAuxiliaryButton
+            self.showsFractionKey = showsFractionKey
         }
 
         /// Button size: capped at 76pt, with minimum 30pt margin per side — and no taller

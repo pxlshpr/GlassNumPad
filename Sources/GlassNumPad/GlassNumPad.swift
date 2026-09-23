@@ -29,6 +29,10 @@ public struct GlassNumPad<
     @State private var calculator = CalculatorEngine()
     @State private var isCapsuleExpanded = false
     @State private var didApplyInitialMode = false
+    /// The value this pad last wrote to the binding from typing. A typed fraction reads "1/4"
+    /// while the value is 0.25, so the `onChange(of: value)` resync can't tell the pad's own
+    /// write from a caller's by comparing formatted text — it compares against this instead.
+    @State private var lastTypedValue: Double?
 
     /// Foreground tint — white on dark, near-black on light.
     private var fg: Color { colorScheme == .dark ? .white : Color(.label) }
@@ -150,6 +154,7 @@ public struct GlassNumPad<
             withTransaction(t) {
                 displayString = CalculatorEngine.format(value)
                 isSelectAll = true
+                lastTypedValue = nil
             }
             // Honor configuration.startsInPicker on first appearance — the
             // capsule expansion drives the mode change via the existing
@@ -170,6 +175,10 @@ public struct GlassNumPad<
             // typing produces a `value` that already matches the formatted
             // display, so this branch is skipped for internal edits and their
             // animations (NumberDisplay's contentTransition) still apply.
+            // The pad's own write (a typed "1/4" is 0.25): consume it once and keep the text.
+            // Anything else is the caller's, and clears it so a later change can't match it.
+            if let typed = lastTypedValue, newValue == typed { lastTypedValue = nil; return }
+            lastTypedValue = nil
             let formatted = CalculatorEngine.format(newValue)
             if formatted != displayString {
                 var t = Transaction()
@@ -379,11 +388,31 @@ public struct GlassNumPad<
         // - calculator AND aux button: single (both slots are occupied)
         // - one of calculator / aux button: double-wide
         // - neither: triple-wide (fills the missing slot)
-        let zeroWidth: CGFloat = (isCalc || (configuration.showsCalculator && hasAux))
-            ? sz
-            : (showsAuxSlot ? sz * 2 + s : sz * 3 + s * 2)
+        //
+        // The fraction key (`showsFractionKey`, numpad mode only) takes one more cell from
+        // `0`, at the far left — never when the calculator and the aux button already share
+        // the row, where `0` has only its one cell left.
+        let showsFraction = configuration.showsFractionKey && !isCalc
+            && !(configuration.showsCalculator && hasAux)
+        let zeroCells: Int = (isCalc || (configuration.showsCalculator && hasAux))
+            ? 1
+            : (showsAuxSlot ? 2 : 3) - (showsFraction ? 1 : 0)
+        let zeroWidth: CGFloat = sz * CGFloat(zeroCells) + s * CGFloat(zeroCells - 1)
 
         return HStack(spacing: s) {
+            // ── Fraction key: far left, leaves as the calculator's period arrives ──
+            if showsFraction {
+                btn(.standard, sz, action: { fractionAction() }) {
+                    Text("/")
+                        .font(.system(size: 30, weight: .medium, design: .rounded))
+                        .foregroundStyle(fg)
+                }
+                .transition(.asymmetric(
+                    insertion: .push(from: .leading),
+                    removal: .push(from: .trailing)
+                ))
+            }
+
             // ── 0 button: width animates between single, double, triple ──
             Button { handleDigit(0) } label: {
                 Text("0")
@@ -548,7 +577,18 @@ public struct GlassNumPad<
 
     private func decimalAction() {
         if isSelectAll { displayString = "0."; isSelectAll = false }
-        else if !displayString.contains(".") { displayString += "." }
+        else if !displayString.contains("."), !displayString.contains("/") { displayString += "." }
+    }
+
+    /// `/` after a whole-number numerator starts the denominator: "1/4" → 0.25. Ignored on
+    /// a fresh or zero readout (nothing to divide), after a decimal point, or a second time.
+    private func fractionAction() {
+        guard !isSelectAll, displayString != "0",
+              !displayString.contains("/"), !displayString.contains("."),
+              !displayString.hasSuffix(".")
+        else { return }
+        displayString += "/"
+        syncValue()
     }
 
     private func deleteAction() {
@@ -565,13 +605,27 @@ public struct GlassNumPad<
         displayString = "0"; isSelectAll = true; syncValue()
     }
 
-    private func syncValue() { value = Double(displayString) ?? 0 }
+    private func syncValue() {
+        let typed = Self.parse(displayString)
+        lastTypedValue = typed
+        value = typed
+    }
+
+    /// The readout as a number: a decimal ("2.5"), or a fraction ("1/4" → 0.25). A fraction
+    /// still being typed counts as its numerator ("1/" → 1), and so does a zero denominator.
+    static func parse(_ text: String) -> Double {
+        let parts = text.split(separator: "/", omittingEmptySubsequences: false)
+        guard parts.count == 2 else { return Double(text) ?? 0 }
+        let numerator = Double(parts[0]) ?? 0
+        guard let denominator = Double(parts[1]), denominator != 0 else { return numerator }
+        return numerator / denominator
+    }
 
     // MARK: - Calculator actions
 
     private func enterCalculatorMode() {
         calculator = CalculatorEngine(
-            initialValue: Double(displayString) ?? 0,
+            initialValue: Self.parse(displayString),
             maxDigitCount: configuration.maxDigitCount
         )
         withAnimation(.interactiveSpring(duration: 0.35)) { mode = .calculator }
