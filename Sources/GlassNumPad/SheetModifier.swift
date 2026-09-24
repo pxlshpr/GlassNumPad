@@ -298,7 +298,14 @@ private struct EdgeAttachedInCompactHeight: UIViewControllerRepresentable {
             while let parent = top.parent { top = parent }
             guard let sheet = top.sheetPresentationController,
                   !sheet.prefersEdgeAttachedInCompactHeight else { return }
-            sheet.prefersEdgeAttachedInCompactHeight = true
+            // The presentation is already under way when this runs. Left to the next layout,
+            // the change lands inside the slide-up's animation and the edge-attached sheet's
+            // frame grows from zero at the bottom-leading corner; laid out here, unanimated, it
+            // has its full width before the slide begins (NutriKit #3277, recorded).
+            UIView.performWithoutAnimation {
+                sheet.prefersEdgeAttachedInCompactHeight = true
+                sheet.containerView?.layoutIfNeeded()
+            }
         }
     }
 }
