@@ -123,6 +123,14 @@ centred. The keys are sized to four rows of the sheet's height, and the sheet is
 bottom edge so it keeps its corners and grabber. Only the sheet presentation does this; a
 `GlassNumPad` embedded in your own layout keeps the stacked form.
 
+The attach has to happen before the sheet's presentation begins: set from inside the sheet it
+comes too late, and the sheet slides up from the unattached full-width frame, narrowing as it
+rises. `SheetPresentationPrep` does it. The sheet modifier calls `expect(.edgeAttachedSheet)` as
+its binding turns on, and one swizzled `present(_:animated:completion:)` applies it to the next
+sheet presented within a second. It's public, so an app can prepare its own sheets the same way,
+or present a full-screen cover unanimated with `.unanimatedCover`: a cover raised in a
+transaction that disables animations is still presented `animated: true`.
+
 ## License
 
 [WTFPL](http://www.wtfpl.net/)

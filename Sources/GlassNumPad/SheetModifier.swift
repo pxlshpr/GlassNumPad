@@ -197,9 +197,32 @@ private struct GlassNumPadPresentation<
     let onAction: () -> Void
     let onAuxiliaryAction: () -> Void
 
+    /// Whether the binding last read presented — so the read that turns it on, in the update
+    /// that presents the sheet, is the one that prepares the presentation.
+    @State private var presentationEdge = PresentationEdge()
+
+    /// `isPresented`, preparing the sheet's presentation as it turns on (NutriKit #3277): the
+    /// sheet is attached to the bottom edge in compact height BEFORE its slide begins, which
+    /// nothing inside the sheet can do in time (`SheetPresentationPrep`).
+    private var preparedIsPresented: Binding<Bool> {
+        let binding = $isPresented
+        let edge = presentationEdge
+        return Binding(
+            get: {
+                let presented = binding.wrappedValue
+                if presented, !edge.wasPresented {
+                    MainActor.assumeIsolated { SheetPresentationPrep.expect(.edgeAttachedSheet) }
+                }
+                edge.wasPresented = presented
+                return presented
+            },
+            set: { binding.wrappedValue = $0 }
+        )
+    }
+
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $isPresented) {
+            .sheet(isPresented: preparedIsPresented) {
                 GlassNumPadSheetContent(
                     value: $value,
                     configuration: configuration,
@@ -216,6 +239,10 @@ private struct GlassNumPadPresentation<
                 GlassNumPadDebug.event("sheetModifier.isPresented → \(newValue)")
             }
     }
+}
+
+private final class PresentationEdge {
+    var wasPresented = false
 }
 
 /// The sheet's content: the pad, at its detent, on a clear background. A view of its own so it
@@ -298,10 +325,11 @@ private struct EdgeAttachedInCompactHeight: UIViewControllerRepresentable {
             while let parent = top.parent { top = parent }
             guard let sheet = top.sheetPresentationController,
                   !sheet.prefersEdgeAttachedInCompactHeight else { return }
-            // The presentation is already under way when this runs. Left to the next layout,
-            // the change lands inside the slide-up's animation and the edge-attached sheet's
-            // frame grows from zero at the bottom-leading corner; laid out here, unanimated, it
-            // has its full width before the slide begins (NutriKit #3277, recorded).
+            // The fallback (NutriKit #3277): the sheet is attached before its presentation by
+            // `preparedIsPresented` (`SheetPresentationPrep`). This runs with the presentation
+            // already under way; left to the next layout the change landed inside the slide-up's
+            // animation and the sheet grew out of the bottom-leading corner, and laid out at once
+            // the slide still starts from the unattached sheet's full-width frame.
             UIView.performWithoutAnimation {
                 sheet.prefersEdgeAttachedInCompactHeight = true
                 sheet.containerView?.layoutIfNeeded()
