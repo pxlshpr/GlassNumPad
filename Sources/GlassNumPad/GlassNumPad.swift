@@ -52,6 +52,10 @@ public struct GlassNumPad<
     @Environment(\.glassNumPadSideBySide) private var sideBySide
     /// #3276 — the box the side-by-side layout was given, measured; the window until then.
     @State private var wideSize: CGSize = .zero
+    /// NutriKit #3725 — the caller's row under the keys, and its controls beside the capsule
+    /// (`glassNumPadFooter`, `glassNumPadCapsuleAccessories`).
+    @Environment(\.glassNumPadFooter) private var footer
+    @Environment(\.glassNumPadCapsuleAccessories) private var capsuleAccessories
 
     private var buttonSize: CGFloat {
         if sideBySide {
@@ -228,6 +232,14 @@ public struct GlassNumPad<
                         removal: .move(edge: .bottom).combined(with: .opacity)
                     ))
             }
+
+            // NutriKit #3725 — under the keys, or under the picker that stands in their place,
+            // so the row never moves as the capsule opens and closes.
+            if let footer {
+                Spacer().frame(height: configuration.buttonSpacing)
+                footer
+                    .frame(width: gridWidth)
+            }
         }
         .padding(.top, 8)
         .padding(.bottom, 10)
@@ -260,6 +272,13 @@ public struct GlassNumPad<
                     wideReadout
                         .frame(maxHeight: .infinity)
                         .clipped()
+                    // NutriKit #3725 — the caller's row, at the foot of this column: the keys
+                    // already take the sheet's height.
+                    if let footer {
+                        footer
+                            .frame(width: grid)
+                            .padding(.top, s)
+                    }
                 }
                 .frame(width: grid, height: grid)
 
@@ -308,12 +327,7 @@ public struct GlassNumPad<
             if isCalc {
                 operatorRow.frame(height: buttonSize)
             } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
-                CapsuleBar(
-                    isExpanded: $isCapsuleExpanded,
-                    accentColor: configuration.accentColor,
-                    isSelectable: isUnitSelectable,
-                    label: { capsuleLabel }
-                )
+                capsuleRow
             }
         }
         .animation(.interactiveSpring(duration: 0.35), value: mode)
@@ -334,15 +348,37 @@ public struct GlassNumPad<
                 Spacer().frame(height: 10)
                 operatorRow.frame(height: buttonSize)
             } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
-                CapsuleBar(
-                    isExpanded: $isCapsuleExpanded,
-                    accentColor: configuration.accentColor,
-                    isSelectable: isUnitSelectable,
-                    label: { capsuleLabel }
-                )
+                capsuleRow
             }
         }
         .animation(.interactiveSpring(duration: 0.35), value: mode)
+    }
+
+    /// The unit capsule, and the caller's controls either side of it when it has any
+    /// (NutriKit #3725): those stand at the key grid's edges, each side the same width so the
+    /// capsule stays centred, and a capsule too long for the middle cuts its label to one line.
+    @ViewBuilder
+    private var capsuleRow: some View {
+        let capsule = CapsuleBar(
+            isExpanded: $isCapsuleExpanded,
+            accentColor: configuration.accentColor,
+            isSelectable: isUnitSelectable,
+            label: { capsuleLabel }
+        )
+        if let capsuleAccessories {
+            HStack(spacing: 8) {
+                capsuleAccessories.leading
+                    .frame(width: capsuleAccessories.width)
+                capsule
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                capsuleAccessories.trailing
+                    .frame(width: capsuleAccessories.width)
+            }
+            .frame(width: gridWidth)
+        } else {
+            capsule
+        }
     }
 
     // MARK: - Operator row (slides in from top)

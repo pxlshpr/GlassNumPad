@@ -3,6 +3,8 @@ import SwiftUI
 struct CapsuleBar<Label: View>: View {
 
     @Environment(\.colorScheme) private var colorScheme
+    /// NutriKit #3725 — a unit the caller wants checked wears its border in this colour.
+    @Environment(\.glassNumPadCapsuleHighlight) private var highlight
 
     @Binding var isExpanded: Bool
     let accentColor: Color
@@ -60,7 +62,7 @@ struct CapsuleBar<Label: View>: View {
                 .fillOnKeyBacking(isExpanded ? accentColor.opacity(0.2) : fill, colorScheme)
                 .overlay(
                     Capsule(style: .continuous)
-                        .strokeBorder(border, lineWidth: 1)
+                        .strokeBorder(highlight ?? border, lineWidth: highlight == nil ? 1 : 2)
                 )
         } else {
             // The digit keys are fill + border; a static unit drops the border and
@@ -68,6 +70,12 @@ struct CapsuleBar<Label: View>: View {
             // key of its own. Keeps the same padding so the header height is unchanged.
             Capsule(style: .continuous)
                 .fillOnKeyBacking(colorScheme == .dark ? .white.opacity(0.04) : Color(.label).opacity(0.03), colorScheme)
+                .overlay {
+                    if let highlight {
+                        Capsule(style: .continuous)
+                            .strokeBorder(highlight, lineWidth: 2)
+                    }
+                }
         }
     }
 }
