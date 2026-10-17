@@ -57,7 +57,7 @@ struct CapsuleBar<Label: View>: View {
         let border: Color = colorScheme == .dark ? .white.opacity(0.1) : Color(.label).opacity(0.08)
         if isSelectable {
             Capsule(style: .continuous)
-                .fill(isExpanded ? accentColor.opacity(0.2) : fill)
+                .fillOnKeyBacking(isExpanded ? accentColor.opacity(0.2) : fill, colorScheme)
                 .overlay(
                     Capsule(style: .continuous)
                         .strokeBorder(border, lineWidth: 1)
@@ -67,7 +67,7 @@ struct CapsuleBar<Label: View>: View {
             // halves the fill, so it reads as a label on the readout rather than a
             // key of its own. Keeps the same padding so the header height is unchanged.
             Capsule(style: .continuous)
-                .fill(colorScheme == .dark ? .white.opacity(0.04) : Color(.label).opacity(0.03))
+                .fillOnKeyBacking(colorScheme == .dark ? .white.opacity(0.04) : Color(.label).opacity(0.03), colorScheme)
         }
     }
 }

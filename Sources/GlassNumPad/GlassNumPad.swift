@@ -623,7 +623,7 @@ public struct GlassNumPad<
 
     private func standardBg(_ cr: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: cr, style: .continuous)
-            .fill(btnFill)
+            .fillOnKeyBacking(btnFill, colorScheme)
             .overlay(
                 RoundedRectangle(cornerRadius: cr, style: .continuous)
                     .strokeBorder(btnBorder, lineWidth: 1)

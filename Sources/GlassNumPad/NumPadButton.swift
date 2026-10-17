@@ -71,7 +71,7 @@ struct NumPadButtonView<Label: View>: View {
                 .foregroundStyle(fg.opacity(0.2))
         default:
             shape
-                .fill(btnFill)
+                .fillOnKeyBacking(btnFill, colorScheme)
                 .overlay(
                     shape.strokeBorder(btnBorder, lineWidth: 1)
                 )
