@@ -79,6 +79,14 @@ struct NumPadButtonView<Label: View>: View {
     }
 }
 
+/// The keys' press: dimmed and eased down to 96% as the finger lands, with a rigid tap then and a
+/// soft one as the key fires (skipped when the two would land as one).
+///
+/// NutriKit #3725 — a standard button underneath, so a pull that starts on a key drags the sheet
+/// down instead of typing the key, as a pull on any button in a sheet does. The drag gesture this
+/// replaced (`highPriorityGesture(DragGesture(minimumDistance: 0))`) claimed every touch from the
+/// moment it landed and fired the key wherever the finger lifted: the sheet could only be pulled
+/// down from the margins beside the keys, and a pull from a key typed it.
 struct NumPadPressStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         NumPadPressBody(configuration: configuration)
@@ -86,7 +94,6 @@ struct NumPadPressStyle: PrimitiveButtonStyle {
 
     private struct NumPadPressBody: View {
         let configuration: PrimitiveButtonStyleConfiguration
-        @State private var isPressed: Bool = false
         @State private var pressedAt: Date? = nil
 
         // Releases within this window of press-down feel like a single
@@ -94,31 +101,37 @@ struct NumPadPressStyle: PrimitiveButtonStyle {
         private static let minHapticGap: TimeInterval = 0.15
 
         var body: some View {
+            Button {
+                let elapsed = pressedAt.map { Date().timeIntervalSince($0) } ?? .infinity
+                pressedAt = nil
+                if elapsed >= Self.minHapticGap {
+                    Haptic.soft()
+                }
+                configuration.trigger()
+            } label: {
+                configuration.label
+            }
+            .buttonStyle(PressFace { pressed in
+                guard pressed else { return }
+                pressedAt = Date()
+                Haptic.rigid()
+            })
+        }
+    }
+
+    /// The press's look, and word of it as the finger lands.
+    private struct PressFace: ButtonStyle {
+        let onPressChange: (Bool) -> Void
+
+        func makeBody(configuration: Configuration) -> some View {
             configuration.label
-                .opacity(isPressed ? 0.5 : 1)
-                .scaleEffect(isPressed ? 0.96 : 1)
-                .animation(.easeOut(duration: 0.12), value: isPressed)
+                .opacity(configuration.isPressed ? 0.5 : 1)
+                .scaleEffect(configuration.isPressed ? 0.96 : 1)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
                 .contentShape(Rectangle())
-                .highPriorityGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in
-                            if !isPressed {
-                                isPressed = true
-                                pressedAt = Date()
-                                Haptic.rigid()
-                            }
-                        }
-                        .onEnded { _ in
-                            guard isPressed else { return }
-                            isPressed = false
-                            let elapsed = pressedAt.map { Date().timeIntervalSince($0) } ?? .infinity
-                            pressedAt = nil
-                            if elapsed >= Self.minHapticGap {
-                                Haptic.soft()
-                            }
-                            configuration.trigger()
-                        }
-                )
+                .onChange(of: configuration.isPressed) { _, pressed in
+                    onPressChange(pressed)
+                }
         }
     }
 }
