@@ -167,6 +167,17 @@ public extension GlassNumPad {
             }
         }
 
+        /// The key window's bottom safe area: the home indicator's band a sheet's foot stands
+        /// over (0 on a phone with a home button). Main thread only, as `windowBounds`.
+        static var windowBottomInset: CGFloat {
+            MainActor.assumeIsolated {
+                UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first { $0.activationState == .foregroundActive }?
+                    .keyWindow?.safeAreaInsets.bottom ?? 0
+            }
+        }
+
         public var resolvedSheetHeight: CGFloat {
             resolvedSheetHeight(inWindowSize: Self.windowBounds.size)
         }

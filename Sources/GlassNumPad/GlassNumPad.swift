@@ -209,6 +209,15 @@ public struct GlassNumPad<
             Spacer().frame(height: configuration.buttonSpacing)
 
             if mode == .picker {
+                // NutriKit #3776 — with nothing under it, the list runs past the pad's foot to the
+                // sheet's bottom edge (the pad's bottom padding and the home indicator's band) and
+                // scrolls its last row clear of that edge: framed at the keys' height, it was cut
+                // off mid-chip with that band standing empty under it. The overhang is drawn, not
+                // laid out, so the sheet's height is the keys' as before. Not for a pad a caller
+                // lays out inside its own view (`availableHeight`, the Duo's), whose foot is not
+                // the sheet's.
+                let overhang = footer == nil && availableHeight == nil
+                    ? 10 + Configuration.windowBottomInset : 0
                 ScrollView {
                     pickerContent
                         .environment(\.dismissGlassNumPadPicker, {
@@ -220,7 +229,9 @@ public struct GlassNumPad<
                         .padding(.horizontal, 20)
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .frame(height: buttonSize * 4 + configuration.buttonSpacing * 3)
+                .contentMargins(.bottom, overhang + 16, for: .scrollContent)
+                .frame(height: buttonSize * 4 + configuration.buttonSpacing * 3 + overhang)
+                .padding(.bottom, -overhang)
                 .transition(.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
                     removal: .move(edge: .bottom).combined(with: .opacity)
