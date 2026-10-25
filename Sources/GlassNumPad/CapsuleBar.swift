@@ -33,49 +33,30 @@ struct CapsuleBar<Label: View>: View {
         }
     }
 
-    private var chip: some View {
-        HStack(spacing: 8) {
-            label()
-                .foregroundStyle(labelColor)
-            if isSelectable {
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(isExpanded ? accentColor : fg.opacity(0.4))
-            }
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .background { chipBackground }
-    }
-
-    private var labelColor: Color {
-        guard isSelectable else { return fg.opacity(0.45) }
-        return isExpanded ? accentColor : fg.opacity(0.7)
-    }
-
     @ViewBuilder
-    private var chipBackground: some View {
-        let fill: Color = colorScheme == .dark ? .white.opacity(0.08) : Color(.label).opacity(0.06)
-        let border: Color = colorScheme == .dark ? .white.opacity(0.1) : Color(.label).opacity(0.08)
+    private var chip: some View {
         if isSelectable {
-            Capsule(style: .continuous)
-                .fillOnKeyBacking(isExpanded ? accentColor.opacity(0.2) : fill, colorScheme)
-                .overlay(
-                    Capsule(style: .continuous)
-                        .strokeBorder(highlight ?? border, lineWidth: highlight == nil ? 1 : 2)
-                )
+            GlassNumPadChip(isActive: isExpanded, accentColor: accentColor, label: label)
         } else {
-            // The digit keys are fill + border; a static unit drops the border and
-            // halves the fill, so it reads as a label on the readout rather than a
-            // key of its own. Keeps the same padding so the header height is unchanged.
-            Capsule(style: .continuous)
-                .fillOnKeyBacking(colorScheme == .dark ? .white.opacity(0.04) : Color(.label).opacity(0.03), colorScheme)
-                .overlay {
-                    if let highlight {
-                        Capsule(style: .continuous)
-                            .strokeBorder(highlight, lineWidth: 2)
-                    }
-                }
+            label()
+                .foregroundStyle(fg.opacity(0.45))
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background { staticBackground }
         }
+    }
+
+    // The digit keys are fill + border; a static unit drops the border and halves the fill, so
+    // it reads as a label on the readout rather than a key of its own. Keeps the same padding
+    // so the header height is unchanged.
+    private var staticBackground: some View {
+        Capsule(style: .continuous)
+            .fillOnKeyBacking(colorScheme == .dark ? .white.opacity(0.04) : Color(.label).opacity(0.03), colorScheme)
+            .overlay {
+                if let highlight {
+                    Capsule(style: .continuous)
+                        .strokeBorder(highlight, lineWidth: 2)
+                }
+            }
     }
 }
