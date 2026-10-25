@@ -29,9 +29,12 @@ public struct GlassNumPadChip<Label: View>: View {
         HStack(spacing: 8) {
             label
                 .foregroundStyle(isActive ? accentColor : fg.opacity(0.7))
-            Image(systemName: isActive ? "chevron.up" : "chevron.down")
+            // One chevron turned, never swapped for another: it rotates as it opens and back
+            // as it closes.
+            Image(systemName: "chevron.down")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(isActive ? accentColor : fg.opacity(0.4))
+                .rotationEffect(.degrees(isActive ? 180 : 0))
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
@@ -45,5 +48,8 @@ public struct GlassNumPadChip<Label: View>: View {
                         .strokeBorder(highlight ?? border, lineWidth: highlight == nil ? 1 : 2)
                 )
         }
+        // The chip animates its own change, both ways: what closes it (a popover dismissed by
+        // a tap outside) sets its state with no animation of its own, and the chip snapped back.
+        .animation(.interactiveSpring(duration: 0.35), value: isActive)
     }
 }
