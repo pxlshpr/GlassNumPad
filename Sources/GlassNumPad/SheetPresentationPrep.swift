@@ -16,6 +16,10 @@ import ObjectiveC
 /// - **An unanimated cover.** A `fullScreenCover` presented in a transaction that disables
 ///   animations is still presented `animated: true` [logged], so a cover that animates its own
 ///   content slid up whole — its scrim a hard-edged block rising from the bottom.
+/// - **Anything else a sheet needs from its first frame** (`expect(_:preparing:)`). NutriKit #3889:
+///   where a sheet stands on a foldable. `.presentationPlacement` reaches the sheet with the rise
+///   already under way, so on the Duo in the book pose it set off from the far leaf and slid across
+///   as it rose [recorded: 92 to 570 pt over 0.4 s, the hinge not moving].
 ///
 /// So whoever raises the presentation says what is coming (`expect`), and the next matching
 /// `present` within a second gets it, applied before `present` runs. One swizzle of
@@ -36,12 +40,19 @@ public enum SheetPresentationPrep {
     private static let lifetime: CFTimeInterval = 1.0
 
     private static var pending: [Expectation: CFTimeInterval] = [:]
+    /// What the pending `.edgeAttachedSheet` needs beside its attachment, nil for nothing.
+    private static var sheetPreparation: (@MainActor (UISheetPresentationController) -> Void)?
     private static var isInstalled = false
 
-    /// The next presentation of this kind is prepared as described.
-    public static func expect(_ expectation: Expectation) {
+    /// The next presentation of this kind is prepared as described, and `preparing`, for an
+    /// `.edgeAttachedSheet`, runs on its sheet just before `present`. It lapses with the expectation.
+    public static func expect(
+        _ expectation: Expectation,
+        preparing: (@MainActor (UISheetPresentationController) -> Void)? = nil
+    ) {
         installIfNeeded()
         pending[expectation] = CACurrentMediaTime()
+        if expectation == .edgeAttachedSheet { sheetPreparation = preparing }
     }
 
     /// Called from the swizzled `present`: applies whatever is expected of this presentation
@@ -54,6 +65,8 @@ public enum SheetPresentationPrep {
             guard pending.removeValue(forKey: .edgeAttachedSheet) != nil,
                   let sheet = presented.sheetPresentationController else { return animated }
             sheet.prefersEdgeAttachedInCompactHeight = true
+            sheetPreparation?(sheet)
+            sheetPreparation = nil
             return animated
         case .fullScreen, .overFullScreen:
             guard pending.removeValue(forKey: .unanimatedCover) != nil else { return animated }
