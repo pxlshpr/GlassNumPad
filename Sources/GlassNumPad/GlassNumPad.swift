@@ -334,7 +334,7 @@ public struct GlassNumPad<
     /// not stretched to fill it, as `headerZone` stretches into its fixed band.
     private var wideReadout: some View {
         VStack(spacing: 10) {
-            NumberDisplay(text: currentDisplay, isCalculatorMode: isCalc)
+            NumberDisplay(text: currentDisplay, isCalculatorMode: isCalc, suffix: configuration.displaySuffix)
             if isCalc {
                 operatorRow.frame(height: buttonSize)
             } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
@@ -352,7 +352,7 @@ public struct GlassNumPad<
 
     private var headerZone: some View {
         VStack(spacing: 0) {
-            NumberDisplay(text: currentDisplay, isCalculatorMode: isCalc)
+            NumberDisplay(text: currentDisplay, isCalculatorMode: isCalc, suffix: configuration.displaySuffix)
                 .frame(maxHeight: .infinity)
 
             if isCalc {

@@ -90,6 +90,34 @@ GlassNumPad(value: $amount, configuration: .init(accentColor: .orange)) {
 }
 ```
 
+### Compound values — hours/minutes/seconds, feet/inches, stones/pounds
+
+`GlassCompoundPad` types a value made of several parts, one part at a time. A row of part
+chips ("1m · 30s") sits above the number; tap a chip to type into that part. There's no unit
+capsule: the part being typed shows its name, muted, beside the number. The bound value is the
+plain sum in base units (seconds, inches, pounds), and parts aren't clamped while typing.
+
+```swift
+@State private var seconds: Double = 90
+
+.glassCompoundPad(isPresented: $show, value: $seconds, units: .minutesSeconds) {
+    Image(systemName: "checkmark")
+} header: {
+    Text("Cue time")
+} onAction: {
+    save(seconds)
+}
+```
+
+Presets: `.hoursMinutesSeconds`, `.hoursMinutes`, `.minutesSeconds` (base: seconds),
+`.feetInches` (inches), `.stonesPounds` (pounds). Make your own with
+`GlassCompoundUnits([GlassCompoundUnit(name:suffix:factor:maxDigits:), …])`. Embed
+`GlassCompoundPad` directly to host it in your own sheet; `sheetHeight(headerHeight:)` gives
+its detent.
+
+A plain pad can show the same muted unit beside its number with
+`Configuration(showCapsule: false, displaySuffix: "kg")`.
+
 ## Configuration
 
 | Property | Default | Description |

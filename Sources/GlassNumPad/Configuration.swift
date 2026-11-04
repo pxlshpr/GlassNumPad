@@ -43,6 +43,10 @@ public extension GlassNumPad {
         /// stand in, so it is ignored when the calculator toggle AND an auxiliary button both
         /// already share the row with `0`.
         public var showsFractionKey: Bool
+        /// Muted unit text shown beside the number ("min", "ft") — for a pad whose unit is
+        /// fixed per field and needs no capsule (`GlassCompoundPad` sets it, with
+        /// `showCapsule: false`). Nil shows the number alone.
+        public var displaySuffix: String?
 
         public init(
             accentColor: Color = .blue,
@@ -58,7 +62,8 @@ public extension GlassNumPad {
             additionalContentHeight: CGFloat = 0,
             unitSelectable: Bool = true,
             showsAuxiliaryButton: Bool = true,
-            showsFractionKey: Bool = false
+            showsFractionKey: Bool = false,
+            displaySuffix: String? = nil
         ) {
             self.accentColor = accentColor
             self.clearColor = clearColor
@@ -74,6 +79,7 @@ public extension GlassNumPad {
             self.unitSelectable = unitSelectable
             self.showsAuxiliaryButton = showsAuxiliaryButton
             self.showsFractionKey = showsFractionKey
+            self.displaySuffix = displaySuffix
         }
 
         /// Button size: capped at 76pt, with minimum 30pt margin per side — and no taller

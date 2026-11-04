@@ -7,17 +7,27 @@ struct NumberDisplay: View {
 
     let text: String
     let isCalculatorMode: Bool
+    /// Muted unit text beside the number (`Configuration.displaySuffix`).
+    var suffix: String? = nil
 
     @State private var hasAppeared = false
 
     var body: some View {
-        Text(text)
-            .font(.system(
-                size: isCalculatorMode ? 48 : 64,
-                weight: .bold,
-                design: .rounded
-            ))
-            .foregroundStyle(colorScheme == .dark ? .white : Color(.label))
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(text)
+                .font(.system(
+                    size: isCalculatorMode ? 48 : 64,
+                    weight: .bold,
+                    design: .rounded
+                ))
+                .foregroundStyle(colorScheme == .dark ? .white : Color(.label))
+            if let suffix, !isCalculatorMode {
+                Text(suffix)
+                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.opacity)
+            }
+        }
             .lineLimit(1)
             .minimumScaleFactor(0.4)
             .frame(maxWidth: .infinity, alignment: .center)
