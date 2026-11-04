@@ -115,6 +115,22 @@ Presets: `.hoursMinutesSeconds`, `.hoursMinutes`, `.minutesSeconds` (base: secon
 `GlassCompoundPad` directly to host it in your own sheet; `sheetHeight(headerHeight:)` gives
 its detent.
 
+### Presets — one-tap values
+
+`.glassNumPadPresets(_:onSelect:)` puts a row of ready-made values where the unit capsule sits:
+key-styled capsule buttons on a horizontal scroll, edge to edge. Tapping one hands it to
+`onSelect` (typically: apply and close), while the keys still type any exact value. Works on the
+plain pad and on `GlassCompoundPad` (values in its base units). Good for common values or
+previously used amounts.
+
+```swift
+GlassCompoundPad(value: $seconds, units: .minutesSeconds) { … } header: { … }
+    .glassNumPadPresets([
+        GlassNumPadPreset(label: "15s", value: 15),
+        GlassNumPadPreset(label: "1m 30s", value: 90),
+    ]) { preset in save(preset.value) }
+```
+
 A plain pad can show the same muted unit beside its number with
 `Configuration(showCapsule: false, displaySuffix: "kg")`.
 

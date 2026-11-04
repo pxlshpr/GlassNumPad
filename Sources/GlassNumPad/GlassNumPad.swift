@@ -36,6 +36,7 @@ public struct GlassNumPad<
     /// The field the display was last synced for (`glassNumPadFieldID`).
     @State private var syncedFieldID: AnyHashable?
     @Environment(\.glassNumPadFieldID) private var fieldID
+    @Environment(\.glassNumPadPresets) private var presets
 
     /// Foreground tint — white on dark, near-black on light.
     private var fg: Color { colorScheme == .dark ? .white : Color(.label) }
@@ -345,6 +346,8 @@ public struct GlassNumPad<
             NumberDisplay(text: currentDisplay, isCalculatorMode: isCalc, suffix: configuration.displaySuffix)
             if isCalc {
                 operatorRow.frame(height: buttonSize)
+            } else if let presets, !presets.items.isEmpty {
+                PresetStrip(presets: presets)
             } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
                 capsuleRow
             }
@@ -380,6 +383,8 @@ public struct GlassNumPad<
             if isCalc {
                 Spacer().frame(height: 10)
                 operatorRow.frame(height: buttonSize)
+            } else if let presets, !presets.items.isEmpty {
+                PresetStrip(presets: presets)
             } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
                 capsuleRow
             }
