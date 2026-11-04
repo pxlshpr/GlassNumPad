@@ -159,6 +159,18 @@ sheet presented within a second. It's public, so an app can prepare its own shee
 or present a full-screen cover unanimated with `.unanimatedCover`: a cover raised in a
 transaction that disables animations is still presented `animated: true`.
 
+## Where it's developed
+
+The one working copy is `~/Developer/Packages/GlassNumPad` on each Mac (pxlbook and pxlhome),
+tracking `github.com/pxlshpr/GlassNumPad`. Make every change there, then tag a release:
+
+- **NutriKit** builds against that checkout directly (`../Packages/GlassNumPad`), so it picks
+  changes up immediately; its `Package.swift` files also declare `from: "1.1.0"`.
+- **Chunes, Bezlo and Crux** depend on tagged releases from GitHub (`from: "1.1.0"` /
+  up-to-next-major). After tagging, re-resolve them (`xcodebuild -resolvePackageDependencies`).
+
+Pull the checkout on the other Mac after pushing, so both machines build the same code.
+
 ## License
 
 [WTFPL](http://www.wtfpl.net/)
