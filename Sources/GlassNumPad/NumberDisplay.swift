@@ -25,7 +25,8 @@ struct NumberDisplay: View {
                 Text(suffix)
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
-                    .contentTransition(.opacity)
+                    .contentTransition(.interpolate)
+                    .animation(.snappy(duration: 0.3), value: suffix)
             }
         }
             .lineLimit(1)

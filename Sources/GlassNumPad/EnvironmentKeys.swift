@@ -115,3 +115,22 @@ public extension EnvironmentValues {
         set { self[GlassNumPadCapsuleHighlightKey.self] = newValue }
     }
 }
+
+
+// MARK: - Field identity (compound values)
+
+private struct GlassNumPadFieldIDKey: EnvironmentKey {
+    static let defaultValue: AnyHashable? = nil
+}
+
+public extension EnvironmentValues {
+    /// Names the field the pad is typing into, for a caller that edits several
+    /// values with ONE pad (`GlassCompoundPad`'s parts). When it changes, the pad
+    /// shows the new field's value with its number transition and starts fresh
+    /// (the first key replaces the value), rather than snapping as it does for
+    /// an unannounced outside change.
+    var glassNumPadFieldID: AnyHashable? {
+        get { self[GlassNumPadFieldIDKey.self] }
+        set { self[GlassNumPadFieldIDKey.self] = newValue }
+    }
+}

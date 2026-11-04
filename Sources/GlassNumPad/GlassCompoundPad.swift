@@ -82,6 +82,7 @@ public struct GlassCompoundPad<ActionContent: View, Header: View>: View {
 
     @State private var parts: [Double]
     @State private var selected: Int
+    @Namespace private var selection
 
     /// Height of the part-chip row above the number.
     public static var partRowHeight: CGFloat { 56 }
@@ -172,9 +173,9 @@ public struct GlassCompoundPad<ActionContent: View, Header: View>: View {
             value = total
             onAction()
         }
-        // A fresh pad per part: its typed-digits state (select-all on the first
-        // key, the digit cap) belongs to the part being edited.
-        .id(selected)
+        // One pad for every part: naming the part lets it roll the number over
+        // to the new part's value (and start fresh) instead of rebuilding.
+        .environment(\.glassNumPadFieldID, selected)
         .onChange(of: total) { _, newTotal in value = newTotal }
     }
 
@@ -185,25 +186,32 @@ public struct GlassCompoundPad<ActionContent: View, Header: View>: View {
             ForEach(Array(units.units.enumerated()), id: \.offset) { index, part in
                 let isSelected = index == selected
                 Button {
-                    selected = index
+                    // One transaction: the highlight slides, the number rolls
+                    // and the unit changes together.
+                    withAnimation(.snappy(duration: 0.3)) { selected = index }
                 } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text(Self.format(parts[index]))
                             .font(.system(size: 20, weight: .bold, design: .rounded).monospacedDigit())
+                            .contentTransition(.numericText())
                         Text(part.suffix)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.secondary)
                     }
                     .frame(minWidth: 64)
                     .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(isSelected ? accentColor.opacity(0.35) : Color.primary.opacity(0.08))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(isSelected ? accentColor : .clear, lineWidth: 1.5)
-                    )
+                    .background {
+                        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        ZStack {
+                            shape.fill(Color.primary.opacity(0.08))
+                            // The selection is ONE shape that slides between chips.
+                            if isSelected {
+                                shape.fill(accentColor.opacity(0.35))
+                                    .overlay(shape.strokeBorder(accentColor, lineWidth: 1.5))
+                                    .matchedGeometryEffect(id: "selection", in: selection)
+                            }
+                        }
+                    }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

@@ -33,6 +33,9 @@ public struct GlassNumPad<
     /// while the value is 0.25, so the `onChange(of: value)` resync can't tell the pad's own
     /// write from a caller's by comparing formatted text — it compares against this instead.
     @State private var lastTypedValue: Double?
+    /// The field the display was last synced for (`glassNumPadFieldID`).
+    @State private var syncedFieldID: AnyHashable?
+    @Environment(\.glassNumPadFieldID) private var fieldID
 
     /// Foreground tint — white on dark, near-black on light.
     private var fg: Color { colorScheme == .dark ? .white : Color(.label) }
@@ -119,6 +122,7 @@ public struct GlassNumPad<
                 stackedLayout
             }
         }
+        .onAppear { syncedFieldID = fieldID }
         .onAppear {
             GlassNumPadDebug.event("pad.onAppear")
             // Initial sync — bypass any inherited animation context (e.g. the sheet's
@@ -141,7 +145,11 @@ public struct GlassNumPad<
                 isCapsuleExpanded = true
             }
         }
+        .onChange(of: fieldID) { _, _ in switchFieldIfNeeded() }
         .onChange(of: value) { _, newValue in
+            // A field switch (compound pads) arrives as a value change too;
+            // whichever handler runs first animates it, the other finds it done.
+            if fieldID != syncedFieldID { switchFieldIfNeeded(); return }
             // External value change (e.g. caller opened the pad on a different
             // item): resync the display AND drop the user back to the standard
             // numpad, so a re-presentation that left the pad in calculator
@@ -346,6 +354,20 @@ public struct GlassNumPad<
 
     private var currentDisplay: String {
         isCalc ? calculator.expression : displayString
+    }
+
+    /// The caller moved the pad to another field: show that field's value with
+    /// the number transition, back on the numpad, with the next key replacing it.
+    private func switchFieldIfNeeded() {
+        guard fieldID != syncedFieldID else { return }
+        syncedFieldID = fieldID
+        lastTypedValue = nil
+        withAnimation(.snappy(duration: 0.3)) {
+            displayString = CalculatorEngine.format(value)
+            isSelectAll = true
+            mode = .numpad
+            isCapsuleExpanded = false
+        }
     }
 
     // MARK: - Header zone (fixed height)
