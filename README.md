@@ -182,8 +182,9 @@ tracking `github.com/pxlshpr/GlassNumPad`. Make every change there, then tag a r
 
 - **NutriKit** builds against that checkout directly (`../Packages/GlassNumPad`), so it picks
   changes up immediately; its `Package.swift` files also declare `from: "1.1.0"`.
-- **Chunes, Bezlo and Crux** depend on tagged releases from GitHub (`from: "1.1.0"` /
-  up-to-next-major). After tagging, re-resolve them (`xcodebuild -resolvePackageDependencies`).
+- **Chunes, Bezlo, Crux and Overload** depend on tagged releases from GitHub (`from:` a 1.x tag,
+  up-to-next-major; Overload `from: "1.2.0"` in `project.yml`). After tagging, re-resolve them
+  (`xcodebuild -resolvePackageDependencies`), and raise `from:` in any that use the new API.
 
 Pull the checkout on the other Mac after pushing, so both machines build the same code.
 
