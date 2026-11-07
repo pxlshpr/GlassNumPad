@@ -82,7 +82,11 @@ public struct GlassCompoundPad<ActionContent: View, Header: View>: View {
 
     @State private var parts: [Double]
     @State private var selected: Int
+    /// Bumped by each preset tap, so the inner pad treats it as a field switch
+    /// and rolls its number to the new value, even when the part stays the same.
+    @State private var presetGeneration = 0
     @Namespace private var selection
+    @Environment(\.glassNumPadPresets) private var presets
 
     /// Height of the part-chip row above the number.
     public static var partRowHeight: CGFloat { 56 }
@@ -175,8 +179,35 @@ public struct GlassCompoundPad<ActionContent: View, Header: View>: View {
         }
         // One pad for every part: naming the part lets it roll the number over
         // to the new part's value (and start fresh) instead of rebuilding.
-        .environment(\.glassNumPadFieldID, selected)
+        .environment(\.glassNumPadFieldID, PartField(index: selected, generation: presetGeneration))
+        // A preset is a whole value in base units: split it across the parts
+        // here (the inner pad would type it into the selected part).
+        .environment(\.glassNumPadPresets, presets.map { outer in
+            GlassNumPadPresets(items: outer.items, onSelect: { preset in
+                applyPreset(preset)
+                outer.onSelect(preset)
+            }, appliesToPad: false)
+        })
         .onChange(of: total) { _, newTotal in value = newTotal }
+    }
+
+    private struct PartField: Hashable {
+        let index: Int
+        let generation: Int
+    }
+
+    /// Shows a tapped preset on the pad before `onSelect` runs: the parts and
+    /// the number roll to it and the selection slides to its largest part, as
+    /// if it had been typed in.
+    private func applyPreset(_ preset: GlassNumPadPreset) {
+        let split = Self.split(preset.value, into: units)
+        withAnimation(.snappy(duration: 0.3)) {
+            parts = split
+            selected = split.firstIndex { $0 > 0 } ?? max(units.units.count - 1, 0)
+            presetGeneration += 1
+        }
+        // From `split`, not `total`: the binding is current before `onSelect`.
+        value = zip(split, units.units).reduce(0) { $0 + $1.0 * $1.1.factor }
     }
 
     /// The part chips; the selected one is the part the keys type into. The

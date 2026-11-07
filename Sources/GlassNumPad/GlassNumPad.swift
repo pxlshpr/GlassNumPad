@@ -347,7 +347,7 @@ public struct GlassNumPad<
             if isCalc {
                 operatorRow.frame(height: buttonSize)
             } else if let presets, !presets.items.isEmpty {
-                PresetStrip(presets: presets)
+                PresetStrip(presets: presets, onTap: selectPreset)
             } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
                 capsuleRow
             }
@@ -384,7 +384,7 @@ public struct GlassNumPad<
                 Spacer().frame(height: 10)
                 operatorRow.frame(height: buttonSize)
             } else if let presets, !presets.items.isEmpty {
-                PresetStrip(presets: presets)
+                PresetStrip(presets: presets, onTap: selectPreset)
             } else if configuration.showCapsule, !(CapsuleLabel.self == EmptyView.self) {
                 capsuleRow
             }
@@ -783,6 +783,19 @@ public struct GlassNumPad<
 
     private func clearAction() {
         displayString = "0"; isSelectAll = true; syncValue()
+    }
+
+    /// A preset tap shows its value first, rolling in as if it had been typed,
+    /// and only then hands it on. Callers usually close the pad in `onSelect`,
+    /// and before this the sheet went down still showing the old value.
+    /// A compound pad's inner pad skips the first step (`appliesToPad`).
+    private func selectPreset(_ preset: GlassNumPadPreset) {
+        if presets?.appliesToPad ?? true {
+            displayString = CalculatorEngine.format(preset.value)
+            isSelectAll = true
+            syncValue()
+        }
+        presets?.onSelect(preset)
     }
 
     private func syncValue() {

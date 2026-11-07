@@ -22,6 +22,10 @@ public struct GlassNumPadPreset: Identifiable, Hashable, Sendable {
 public struct GlassNumPadPresets {
     public let items: [GlassNumPadPreset]
     public let onSelect: (GlassNumPadPreset) -> Void
+    /// Whether the pad shows a tapped preset's value itself before `onSelect`.
+    /// `GlassCompoundPad` turns it off for its inner pad: the preset is in base
+    /// units, so the compound pad splits it across its parts instead.
+    var appliesToPad = true
 }
 
 private struct GlassNumPadPresetsKey: EnvironmentKey {
@@ -53,6 +57,8 @@ public extension View {
 struct PresetStrip: View {
     @Environment(\.colorScheme) private var colorScheme
     let presets: GlassNumPadPresets
+    /// The pad's handler: it shows the value, then calls `presets.onSelect`.
+    let onTap: (GlassNumPadPreset) -> Void
 
     private var fill: Color { colorScheme == .dark ? .white.opacity(0.08) : Color(.label).opacity(0.06) }
     private var border: Color { colorScheme == .dark ? .white.opacity(0.1) : Color(.label).opacity(0.08) }
@@ -64,7 +70,7 @@ struct PresetStrip: View {
                 ForEach(presets.items) { preset in
                     Button {
                         Haptic.light()
-                        presets.onSelect(preset)
+                        onTap(preset)
                     } label: {
                         Text(preset.label)
                             .font(.system(size: 16, weight: .semibold, design: .rounded).monospacedDigit())
