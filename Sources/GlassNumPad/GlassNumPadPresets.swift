@@ -69,7 +69,7 @@ struct PresetStrip: View {
             HStack(spacing: 8) {
                 ForEach(presets.items) { preset in
                     Button {
-                        Haptic.light()
+                        Haptic.play(.preset) { Haptic.light() }
                         onTap(preset)
                     } label: {
                         Text(preset.label)

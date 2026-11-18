@@ -18,7 +18,7 @@ struct CapsuleBar<Label: View>: View {
     var body: some View {
         if isSelectable {
             Button {
-                Haptic.medium()
+                Haptic.play(.capsule) { Haptic.medium() }
                 withAnimation(.interactiveSpring(duration: 0.35)) {
                     isExpanded.toggle()
                 }

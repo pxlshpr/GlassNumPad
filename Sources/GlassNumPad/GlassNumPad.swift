@@ -690,7 +690,7 @@ public struct GlassNumPad<
                     }
                 )
         }
-        .buttonStyle(NumPadPressStyle())
+        .buttonStyle(NumPadPressStyle(isAction: true))
     }
 
     // MARK: - Shared button background

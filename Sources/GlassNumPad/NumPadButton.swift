@@ -87,13 +87,22 @@ struct NumPadButtonView<Label: View>: View {
 /// replaced (`highPriorityGesture(DragGesture(minimumDistance: 0))`) claimed every touch from the
 /// moment it landed and fired the key wherever the finger lifted: the sheet could only be pulled
 /// down from the margins beside the keys, and a pull from a key typed it.
+///
+/// NutriKit #3972 — with `GlassNumPadHooks.play` set, a key's one buzz is the app's, as the finger
+/// lands (`.key`), and the release plays nothing. The action key is the exception: it reports
+/// `.action` once the action has run, so the app can leave the buzz to what the action commits.
 struct NumPadPressStyle: PrimitiveButtonStyle {
+    /// The action key (✓ / =): its press is reported as `.action`, so an app can leave it to
+    /// whatever the action commits.
+    var isAction = false
+
     func makeBody(configuration: Configuration) -> some View {
-        NumPadPressBody(configuration: configuration)
+        NumPadPressBody(configuration: configuration, isAction: isAction)
     }
 
     private struct NumPadPressBody: View {
         let configuration: PrimitiveButtonStyleConfiguration
+        let isAction: Bool
         @State private var pressedAt: Date? = nil
 
         // Releases within this window of press-down feel like a single
@@ -104,7 +113,13 @@ struct NumPadPressStyle: PrimitiveButtonStyle {
             Button {
                 let elapsed = pressedAt.map { Date().timeIntervalSince($0) } ?? .infinity
                 pressedAt = nil
-                if elapsed >= Self.minHapticGap {
+                // #3972 — the app's action key is felt after what it commits has had its say.
+                if isAction, let hook = GlassNumPadHooks.play {
+                    configuration.trigger()
+                    hook(.action)
+                    return
+                }
+                if elapsed >= Self.minHapticGap, GlassNumPadHooks.play == nil {
                     Haptic.soft()
                 }
                 configuration.trigger()
@@ -114,7 +129,8 @@ struct NumPadPressStyle: PrimitiveButtonStyle {
             .buttonStyle(PressFace { pressed in
                 guard pressed else { return }
                 pressedAt = Date()
-                Haptic.rigid()
+                if isAction, GlassNumPadHooks.play != nil { return }
+                Haptic.play(.key) { Haptic.rigid() }
             })
         }
     }
